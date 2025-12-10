@@ -11,23 +11,23 @@
 </div>
 
 <div class="row">
-    <!-- 讓機器人說話 -->
+    <!-- 發送公告訊息 -->
     <div class="col-md-6 mb-4">
         <div class="card">
             <div class="card-header">
-                <h5><i class="fas fa-comment"></i> 讓機器人說話</h5>
+                <h5><i class="fas fa-bullhorn"></i> 發送公告訊息</h5>
             </div>
             <div class="card-body">
                 <form id="botSayForm">
                     <div class="mb-3">
-                        <label for="channelSelect" class="form-label">選擇頻道</label>
+                        <label for="channelSelect" class="form-label">選擇文字頻道</label>
                         <select class="form-control" id="channelSelect">
                             <option value="">選擇頻道...</option>
                         </select>
                     </div>
                     <div class="mb-3">
                         <label for="botMessage" class="form-label">訊息內容</label>
-                        <textarea class="form-control" id="botMessage" rows="4" placeholder="請輸入要讓機器人說的話..."></textarea>
+                        <textarea class="form-control" id="botMessage" rows="4" placeholder="請輸入要發送的公告訊息..."></textarea>
                     </div>
                     <button type="button" class="btn btn-primary" onclick="sendBotMessage()">
                         <i class="fas fa-paper-plane"></i> 發送訊息
@@ -448,28 +448,6 @@ function leaveVoiceChannel() {
     });
 }
 
-function botSpeak() {
-    const text = document.getElementById('ttsText').value;
-    if (!text.trim()) {
-        alert('請輸入文字');
-        return;
-    }
-    
-    fetch('/api/voice/tts', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({text: text})
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.success) {
-            alert('機器人正在說話...');
-            document.getElementById('ttsText').value = '';
-        } else {
-            alert('錯誤: ' + data.error);
-        }
-    });
-}
 
 function addSensitiveWord() {
     const word = document.getElementById('sensitiveWord').value;

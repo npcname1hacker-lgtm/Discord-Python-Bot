@@ -517,12 +517,26 @@ def bot_status():
             'member_count': 0
         })
     
-    return jsonify({
-        'online': not discord_bot_instance.bot.is_closed(),
-        'latency': round(discord_bot_instance.bot.latency * 1000),
-        'guild_count': len(discord_bot_instance.bot.guilds),
-        'member_count': sum(guild.member_count for guild in discord_bot_instance.bot.guilds)
-    })
+    try:
+        member_count = 0
+        for guild in discord_bot_instance.bot.guilds:
+            if guild.member_count:
+                member_count += guild.member_count
+        
+        return jsonify({
+            'online': not discord_bot_instance.bot.is_closed(),
+            'latency': round(discord_bot_instance.bot.latency * 1000) if discord_bot_instance.bot.latency else 0,
+            'guild_count': len(discord_bot_instance.bot.guilds),
+            'member_count': member_count
+        })
+    except Exception as e:
+        return jsonify({
+            'online': False,
+            'latency': 0,
+            'guild_count': 0,
+            'member_count': 0,
+            'error': str(e)
+        })
 
 @app.route('/api/bot/channels')
 @login_required
