@@ -79,18 +79,22 @@ class DiscordBot:
             activity = discord.Game(name=self.config.BOT_STATUS)
             await self.bot.change_presence(status=discord.Status.online, activity=activity)
             
-            # 連接 Wavelink (Lavalink)
-            try:
-                lavalink_url = os.getenv('LAVALINK_URL', 'http://localhost:2333')
-                lavalink_password = os.getenv('LAVALINK_PASSWORD', 'youshallnotpass')
-                
-                node = wavelink.Node(uri=lavalink_url, password=lavalink_password)
-                await wavelink.Pool.connect(client=self.bot, nodes=[node])
-                self.logger.info(f"✅ Wavelink 已連接到 {lavalink_url}")
-                self.lavalink_active = True
-                
-            except Exception as e:
-                self.logger.warning(f"⚠️ Wavelink 連接失敗 (音樂功能不可用): {str(e)}")
+            # 連接 Wavelink (Lavalink) - 僅在設置了 LAVALINK_URL 時嘗試連接
+            lavalink_url = os.getenv('LAVALINK_URL', '')
+            if lavalink_url:
+                try:
+                    lavalink_password = os.getenv('LAVALINK_PASSWORD', 'youshallnotpass')
+                    
+                    node = wavelink.Node(uri=lavalink_url, password=lavalink_password)
+                    await wavelink.Pool.connect(client=self.bot, nodes=[node])
+                    self.logger.info(f"✅ Wavelink 已連接到 {lavalink_url}")
+                    self.lavalink_active = True
+                    
+                except Exception as e:
+                    self.logger.warning(f"⚠️ Wavelink 連接失敗 (音樂功能不可用): {str(e)}")
+                    self.lavalink_active = False
+            else:
+                self.logger.info("ℹ️ Lavalink 未配置，音樂功能已禁用")
                 self.lavalink_active = False
             
             # 列出所有連接的伺服器
