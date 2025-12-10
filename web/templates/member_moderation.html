@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+
+{% block title %}成員處理 - ɢʀᴠ戰隊管理系統{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2><i class="fas fa-gavel"></i> 成員處理</h2>
+    </div>
+</div>
+
+<ul class="nav nav-tabs mb-4">
+    <li class="nav-item">
+        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#members" type="button">
+            <i class="fas fa-users"></i> 成員列表
+        </button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#actions" type="button">
+            <i class="fas fa-tools"></i> 處理操作
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content">
+    <!-- 成員列表 -->
+    <div class="tab-pane fade show active" id="members">
+        <div class="card mb-3">
+            <div class="card-header bg-info text-white">
+                <h5>自動掃描成員</h5>
+            </div>
+            <div class="card-body">
+                <button class="btn btn-info w-100" onclick="scanMembers()">
+                    <i class="fas fa-search"></i> 掃描 Discord 伺服器所有成員
+                </button>
+                <small class="text-muted d-block mt-2">點擊按鈕掃描整個伺服器的所有成員（不包括機器人）</small>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5>成員列表</h5>
+            </div>
+            <div class="card-body">
+                <table class="table" id="membersTable">
+                    <thead>
+                        <tr>
+                            <th>成員名稱</th>
+                            <th>加入日期</th>
+                            <th>身份組</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 處理操作 -->
+    <div class="tab-pane fade" id="actions">
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h5>對成員進行操作</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="memberSelect" class="form-label">選擇成員</label>
+                    <select class="form-control" id="memberSelect" required></select>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="actionType" class="form-label">操作類型</label>
+                    <select class="form-control" id="actionType" required>
+                        <option value="">-- 選擇操作 --</option>
+                        <option value="timeout">禁言</option>
+                        <option value="kick">踢出</option>
+                        <option value="ban">封鎖</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3" id="durationDiv" style="display:none;">
+                    <label for="duration" class="form-label">禁言時長（分鐘）</label>
+                    <input type="number" class="form-control" id="duration" min="1" max="40320">
+                </div>
+                
+                <div class="mb-3">
+                    <label for="reason" class="form-label">原因</label>
+                    <textarea class="form-control" id="reason" rows="3" placeholder="填寫處理原因..."></textarea>
+                </div>
+                
+                <button class="btn btn-danger" onclick="performAction()">
+                    <i class="fas fa-check"></i> 執行操作
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 載入初始成員列表
+loadMembersList();
+
+function loadMembersList() {
+    fetch('/api/members/list')
+        .then(res => res.json())
+        .then(data => {
+            const tbody = document.querySelector('#membersTable tbody');
+            const select = document.getElementById('memberSelect');
+            tbody.innerHTML = '';
+            select.innerHTML = '<option value="">-- 選擇成員 --</option>';
+            
+            if (data.members) {
+                data.members.forEach(member => {
+                    const row = tbody.insertRow();
+                    const joinDate = new Date(member.joined_at).toLocaleDateString('zh-TW');
+                    row.innerHTML = `<td>${member.name}</td><td>${joinDate}</td><td>${member.roles.join(', ')}</td><td><button class="btn btn-sm btn-info">詳情</button></td>`;
+                    
+                    const option = document.createElement('option');
+                    option.value = member.id;
+                    option.textContent = member.name;
+                    select.appendChild(option);
+                });
+            }
+        });
+}
+
+function scanMembers() {
+    fetch('/api/server/scan-members', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({})
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            const tbody = document.querySelector('#membersTable tbody');
+            const select = document.getElementById('memberSelect');
+            tbody.innerHTML = '';
+            select.innerHTML = '<option value="">-- 選擇成員 --</option>';
+            
+            if (data.members && data.members.length > 0) {
+                data.members.forEach(member => {
+                    const row = tbody.insertRow();
+                    const joinDate = new Date(member.joined_at).toLocaleDateString('zh-TW');
+                    row.innerHTML = `<td>${member.name}</td><td>${joinDate}</td><td>${member.roles.join(', ') || '無'}</td><td><button class="btn btn-sm btn-info">詳情</button></td>`;
+                    
+                    const option = document.createElement('option');
+                    option.value = member.id;
+                    option.textContent = member.name;
+                    select.appendChild(option);
+                });
+                alert(`成功掃描 ${data.count || 0} 個成員！`);
+            } else {
+                alert('找不到成員');
+            }
+        } else {
+            alert('掃描失敗：' + (data.error || '未知錯誤'));
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        alert('掃描出錯');
+    });
+}
+
+// 控制禁言時長顯示
+document.getElementById('actionType').addEventListener('change', function() {
+    document.getElementById('durationDiv').style.display = this.value === 'timeout' ? 'block' : 'none';
+});
+
+function performAction() {
+    const memberId = document.getElementById('memberSelect').value;
+    const action = document.getElementById('actionType').value;
+    const reason = document.getElementById('reason').value;
+    const duration = document.getElementById('duration').value;
+    
+    if (!memberId || !action) {
+        alert('請選擇成員和操作類型');
+        return;
+    }
+    
+    fetch('/api/members/action', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            member_id: memberId,
+            action: action,
+            reason: reason,
+            duration: action === 'timeout' ? duration : undefined
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            alert('操作已執行！');
+            document.getElementById('reason').value = '';
+            document.getElementById('duration').value = '';
+        } else {
+            alert('操作失敗：' + data.error);
+        }
+    });
+}
+</script>
+{% endblock %}

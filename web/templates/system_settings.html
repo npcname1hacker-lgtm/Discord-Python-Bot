@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+
+{% block title %}系統設置 - ɢʀᴠ戰隊管理系統{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2><i class="fas fa-sliders-h"></i> 系統設置</h2>
+    </div>
+</div>
+
+<ul class="nav nav-tabs mb-4">
+    <li class="nav-item">
+        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#botSettings" type="button">
+            <i class="fas fa-robot"></i> 機器人設置
+        </button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#filterSettings" type="button">
+            <i class="fas fa-filter"></i> 敏感詞設置
+        </button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#systemSettings" type="button">
+            <i class="fas fa-cogs"></i> 系統設置
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content">
+    <!-- 機器人設置 -->
+    <div class="tab-pane fade show active" id="botSettings">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5>機器人狀態和活動</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="botActivity" class="form-label">機器人活動狀態</label>
+                    <input type="text" class="form-control" id="botActivity" placeholder="e.g. 守護 ɢʀᴠ戰隊">
+                </div>
+                <div class="mb-3">
+                    <label for="botActivityType" class="form-label">活動類型</label>
+                    <select class="form-control" id="botActivityType">
+                        <option value="playing">正在玩</option>
+                        <option value="watching">正在觀看</option>
+                        <option value="listening">正在聆聽</option>
+                        <option value="streaming">正在直播</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary" onclick="updateBotActivity()">
+                    <i class="fas fa-save"></i> 更新狀態
+                </button>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header bg-danger text-white">
+                <h5>機器人重啟</h5>
+            </div>
+            <div class="card-body">
+                <button class="btn btn-danger" onclick="if(confirm('確認要重啟機器人嗎？')) restartBot()">
+                    <i class="fas fa-sync-alt"></i> 重啟機器人
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 敏感詞設置 -->
+    <div class="tab-pane fade" id="filterSettings">
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h5>敏感詞管理</h5>
+            </div>
+            <div class="card-body">
+                <table class="table" id="filterTable">
+                    <thead>
+                        <tr>
+                            <th>敏感詞</th>
+                            <th>替換為</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header bg-info text-white">
+                <h5>新增敏感詞</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-5 mb-3">
+                        <input type="text" class="form-control" id="newFilterWord" placeholder="敏感詞">
+                    </div>
+                    <div class="col-md-5 mb-3">
+                        <input type="text" class="form-control" id="newFilterReplace" placeholder="替換為">
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <button class="btn btn-info w-100" onclick="addFilter()">
+                            <i class="fas fa-plus"></i> 新增
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 系統設置 -->
+    <div class="tab-pane fade" id="systemSettings">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5>系統資訊</h5>
+            </div>
+            <div class="card-body">
+                <table class="table">
+                    <tr>
+                        <td><strong>系統版本</strong></td>
+                        <td id="systemVersion">--</td>
+                    </tr>
+                    <tr>
+                        <td><strong>最後更新時間</strong></td>
+                        <td id="lastUpdate">--</td>
+                    </tr>
+                    <tr>
+                        <td><strong>運行時間</strong></td>
+                        <td id="uptime">--</td>
+                    </tr>
+                    <tr>
+                        <td><strong>伺服器數</strong></td>
+                        <td id="serverCount">--</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header bg-danger text-white">
+                <h5>資料庫操作</h5>
+            </div>
+            <div class="card-body">
+                <button class="btn btn-warning" onclick="if(confirm('確認要清空所有日誌嗎？')) clearLogs()">
+                    <i class="fas fa-trash"></i> 清空日誌
+                </button>
+                <button class="btn btn-danger ms-2" onclick="if(confirm('確認要重置系統嗎？這將刪除所有用戶！')) resetSystem()">
+                    <i class="fas fa-exclamation-triangle"></i> 重置系統
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 載入系統設置
+fetch('/api/system/info')
+    .then(res => res.json())
+    .then(data => {
+        document.getElementById('systemVersion').textContent = data.version || '1.0.0';
+        document.getElementById('lastUpdate').textContent = data.last_update || '--';
+        document.getElementById('uptime').textContent = data.uptime || '--';
+        document.getElementById('serverCount').textContent = data.server_count || 0;
+    });
+
+// 載入敏感詞列表
+function loadFilters() {
+    fetch('/api/system/filters')
+        .then(res => res.json())
+        .then(data => {
+            const tbody = document.querySelector('#filterTable tbody');
+            tbody.innerHTML = '';
+            if (data.filters) {
+                data.filters.forEach(filter => {
+                    const row = tbody.insertRow();
+                    row.innerHTML = `<td>${filter.word}</td><td>${filter.replace}</td><td><button class="btn btn-sm btn-danger" onclick="removeFilter('${filter.word}')">刪除</button></td>`;
+                });
+            }
+        });
+}
+
+loadFilters();
+
+function updateBotActivity() {
+    const activity = document.getElementById('botActivity').value;
+    const type = document.getElementById('botActivityType').value;
+    
+    if (!activity) {
+        alert('請輸入活動狀態');
+        return;
+    }
+    
+    fetch('/api/system/bot-activity', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({activity: activity, type: type})
+    })
+    .then(res => res.json())
+    .then(data => {
+        alert(data.success ? '狀態已更新！' : '更新失敗：' + data.error);
+    });
+}
+
+function addFilter() {
+    const word = document.getElementById('newFilterWord').value;
+    const replace = document.getElementById('newFilterReplace').value;
+    
+    if (!word || !replace) {
+        alert('請填寫所有欄位');
+        return;
+    }
+    
+    fetch('/api/system/add-filter', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({word: word, replace: replace})
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('newFilterWord').value = '';
+            document.getElementById('newFilterReplace').value = '';
+            loadFilters();
+        } else {
+            alert('新增失敗：' + data.error);
+        }
+    });
+}
+
+function removeFilter(word) {
+    fetch('/api/system/remove-filter', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({word: word})
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            loadFilters();
+        } else {
+            alert('刪除失敗');
+        }
+    });
+}
+
+function restartBot() {
+    fetch('/api/system/restart-bot', {method: 'POST'})
+        .then(res => res.json())
+        .then(data => alert(data.success ? '機器人已重啟' : '重啟失敗'));
+}
+
+function clearLogs() {
+    fetch('/api/system/clear-logs', {method: 'POST'})
+        .then(res => res.json())
+        .then(data => alert(data.success ? '日誌已清空' : '清空失敗'));
+}
+
+function resetSystem() {
+    fetch('/api/system/reset', {method: 'POST'})
+        .then(res => res.json())
+        .then(data => alert(data.success ? '系統已重置' : '重置失敗'));
+}
+</script>
+{% endblock %}

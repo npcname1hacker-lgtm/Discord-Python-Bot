@@ -1,0 +1,294 @@
+{% extends "base.html" %}
+
+{% block title %}個人設置 - ɢʀᴠ戰隊管理系統{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2><i class="fas fa-cog"></i> 個人設置</h2>
+        <p class="text-muted">管理您的賬號資訊</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <!-- 賬號資訊 -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="fas fa-user"></i> 賬號資訊</h5>
+            </div>
+            <div class="card-body">
+                <form id="profileForm">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="username" class="form-label">用戶名</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="username" value="{{ user.username }}">
+                                    <button type="button" class="btn btn-outline-primary" onclick="changeUsername()">
+                                        <i class="fas fa-edit"></i> 修改
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="role" class="form-label">權限等級</label>
+                                <input type="text" class="form-control" value="{{ user.get_role_display() }}" readonly>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="email" class="form-label">電子郵件</label>
+                                <input type="email" class="form-control" id="email" value="{{ user.email or '' }}" placeholder="輸入您的電子郵件">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="phone" class="form-label">電話號碼</label>
+                                <input type="tel" class="form-control" id="phone" value="{{ user.phone or '' }}" placeholder="輸入您的電話號碼">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button type="button" class="btn btn-primary" onclick="updateProfile()">
+                        <i class="fas fa-save"></i> 保存變更
+                    </button>
+                </form>
+            </div>
+        </div>
+        
+        <!-- 更改密碼 -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="fas fa-lock"></i> 更改密碼</h5>
+            </div>
+            <div class="card-body">
+                <form id="passwordForm">
+                    <div class="mb-3">
+                        <label for="oldPassword" class="form-label">目前密碼</label>
+                        <input type="password" class="form-control" id="oldPassword" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="newPassword" class="form-label">新密碼</label>
+                        <input type="password" class="form-control" id="newPassword" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="confirmPassword" class="form-label">確認新密碼</label>
+                        <input type="password" class="form-control" id="confirmPassword" required>
+                    </div>
+                    
+                    <button type="button" class="btn btn-warning" onclick="changePassword()">
+                        <i class="fas fa-key"></i> 更新密碼
+                    </button>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Discord 綁定 -->
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fab fa-discord"></i> Discord 帳號綁定</h5>
+            </div>
+            <div class="card-body">
+                <div id="discordStatus">
+                    {% if user.role.value == 'high' %}
+                        {% if user.discord_id %}
+                        <p class="text-success"><i class="fas fa-check-circle"></i> 已綁定 Discord</p>
+                        <p class="small text-muted">Discord ID: {{ user.discord_id }}</p>
+                        <button type="button" class="btn btn-danger btn-sm" onclick="unlinkDiscord()">
+                            <i class="fas fa-unlink"></i> 解除綁定
+                        </button>
+                        {% else %}
+                        <p class="text-muted"><i class="fas fa-circle-notch"></i> 未綁定 Discord</p>
+                        <button type="button" class="btn btn-primary btn-sm" onclick="bindDiscord()">
+                            <i class="fab fa-discord"></i> 綁定 Discord 帳號
+                        </button>
+                        {% endif %}
+                    {% else %}
+                    <div class="alert alert-warning mb-0">
+                        <i class="fas fa-lock"></i> <strong>僅隊長可用</strong>
+                        <p class="mb-0 small mt-2">Discord 帳號綁定功能只對隊長開放</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <!-- 賬號統計 -->
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-bar"></i> 賬號統計</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>創建時間:</strong><br>{{ user.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+                <p><strong>最後登錄:</strong><br>{{ user.last_login.strftime('%Y-%m-%d %H:%M:%S') if user.last_login else '首次登錄' }}</p>
+                <p><strong>創建者:</strong><br>{{ user.created_by }}</p>
+            </div>
+        </div>
+        
+        <!-- 系統資訊 -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5><i class="fas fa-info-circle"></i> 系統資訊</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>版本:</strong> V1.00.8</p>
+                <p><strong>創作者:</strong> ɢʀᴠ戰隊隊長殤嵐</p>
+                <p class="mb-0"><strong>最後更新:</strong> 2025-08-31</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function updateProfile() {
+    const email = document.getElementById('email').value;
+    const phone = document.getElementById('phone').value;
+    
+    fetch('/api/user/update', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            email: email,
+            phone: phone
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('資料已更新！');
+        } else {
+            alert('更新失敗：' + data.error);
+        }
+    });
+}
+
+function bindDiscord() {
+    // 簡化方式：要求用戶輸入 Discord ID
+    const discordId = prompt('請輸入您的 Discord ID 或 @用戶名:\n(您可以在 Discord 中右鍵點擊用戶名，選擇「複製用戶ID」)');
+    
+    if (!discordId || discordId.trim() === '') {
+        alert('已取消綁定');
+        return;
+    }
+    
+    fetch('/api/user/link-discord', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            discord_id: discordId.trim()
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Discord 帳號已綁定！');
+            location.reload();
+        } else {
+            alert('綁定失敗: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('綁定出錯，請稍後重試');
+    });
+}
+
+function unlinkDiscord() {
+    if (confirm('確定要解除 Discord 綁定嗎？')) {
+        fetch('/api/user/unlink-discord', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({})
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('已解除 Discord 綁定');
+                location.reload();
+            } else {
+                alert('解除綁定失敗: ' + data.error);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+}
+
+function changeUsername() {
+    const newUsername = document.getElementById('username').value.trim();
+    const currentUsername = '{{ user.username }}';
+    
+    if (newUsername === currentUsername) {
+        alert('新用戶名與原用戶名相同');
+        return;
+    }
+    
+    if (!newUsername || newUsername.length < 3) {
+        alert('用戶名至少3個字符');
+        return;
+    }
+    
+    fetch('/api/change-username', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            new_username: newUsername
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('用戶名已更改！正在重新加載...');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            alert('修改失敗：' + data.error);
+        }
+    });
+}
+
+function changePassword() {
+    const oldPassword = document.getElementById('oldPassword').value;
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    
+    if (newPassword !== confirmPassword) {
+        alert('兩次輸入的密碼不一致');
+        return;
+    }
+    
+    fetch('/api/user/change-password', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            old_password: oldPassword,
+            new_password: newPassword
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('密碼已更新！');
+            document.getElementById('passwordForm').reset();
+        } else {
+            alert('更新失敗：' + data.error);
+        }
+    });
+}
+</script>
+{% endblock %}

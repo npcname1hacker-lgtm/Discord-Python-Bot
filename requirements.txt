@@ -1,0 +1,13 @@
+Flask==2.3.0
+Flask-Login==0.6.2
+Flask-SQLAlchemy==3.0.5
+discord.py==2.3.1
+SQLAlchemy==2.0.19
+psycopg2-binary==2.9.6
+bcrypt==4.0.1
+python-dotenv==1.0.0
+requests==2.31.0
+pynacl==1.5.0
+werkzeug==2.3.0
+wavelink==3.4.1
+lavalink==5.9.0

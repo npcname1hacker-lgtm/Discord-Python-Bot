@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}權限不足 - ɢʀᴠ戰隊管理系統{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="restricted-notice">
+            <div class="text-center">
+                <i class="fas fa-exclamation-triangle fa-3x mb-3"></i>
+                <h3>權限不足</h3>
+                <p class="mb-3">您的賬號權限等級為「受限用戶」</p>
+                <p class="mb-3">如需使用管理功能，請聯繫戰隊隊長申請權限提升</p>
+                
+                <div class="mt-4">
+                    <h5>聯繫方式：</h5>
+                    <p><i class="fab fa-discord"></i> Discord私信：ɢʀᴠ戰隊隊長殤嵐</p>
+                    <p><i class="fas fa-envelope"></i> 說明您需要的權限等級</p>
+                </div>
+                
+                <a href="{{ url_for('logout') }}" class="btn btn-outline-light mt-3">
+                    <i class="fas fa-sign-out-alt"></i> 登出
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}註冊新帳號 - ɢʀᴠ戰隊管理系統{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header text-center bg-success text-white">
+                <h3><i class="fas fa-user-plus"></i> 註冊新帳號</h3>
+                <p class="mb-0">建立您的戰隊管理帳號</p>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">
+                            <i class="fas fa-user"></i> 用戶名 <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="username" name="username" required minlength="3" maxlength="20">
+                        <small class="text-muted">3-20個字符，只能包含字母、數字和底線</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="password" class="form-label">
+                            <i class="fas fa-lock"></i> 密碼 <span class="text-danger">*</span>
+                        </label>
+                        <input type="password" class="form-control" id="password" name="password" required minlength="6">
+                        <small class="text-muted">至少6個字符</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="confirm_password" class="form-label">
+                            <i class="fas fa-lock"></i> 確認密碼 <span class="text-danger">*</span>
+                        </label>
+                        <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                    </div>
+                    
+                    <div class="alert alert-warning">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>審核流程：</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>註冊後帳號將處於待審核狀態</li>
+                            <li>隊長會通過 Discord 發送審核申請</li>
+                            <li>隊長審核通過後，您才能正式登錄使用</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-user-plus"></i> 註冊帳號
+                        </button>
+                        <a href="{{ url_for('login') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-sign-in-alt"></i> 已有帳號？返回登錄
+                        </a>
+                    </div>
+                </form>
+            </div>
+            <div class="card-footer text-center text-muted">
+                <small>V1.02.0 | 創作者：ɢʀᴠ戰隊隊長殤嵐</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 密碼確認驗證
+document.querySelector('form').addEventListener('submit', function(e) {
+    const password = document.getElementById('password').value;
+    const confirmPassword = document.getElementById('confirm_password').value;
+    
+    if (password !== confirmPassword) {
+        e.preventDefault();
+        alert('兩次輸入的密碼不一致，請重新確認');
+        return false;
+    }
+    
+    return true;
+});
+</script>
+{% endblock %}

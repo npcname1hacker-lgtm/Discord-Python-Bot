@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+
+{% block title %}用戶管理 - ɢʀᴠ戰隊管理系統{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2><i class="fas fa-users-cog"></i> 用戶管理</h2>
+        <p class="text-muted">管理所有系統用戶賬號</p>
+    </div>
+</div>
+
+<div class="row mb-3">
+    <div class="col">
+        <button class="btn btn-success" onclick="showAddUserModal()">
+            <i class="fas fa-user-plus"></i> 新增用戶
+        </button>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5><i class="fas fa-list"></i> 用戶列表</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>用戶名</th>
+                        <th>權限等級</th>
+                        <th>電子郵件</th>
+                        <th>電話</th>
+                        <th>最後登錄</th>
+                        <th>創建時間</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>
+                            <strong>{{ user.username }}</strong>
+                            {% if user.username == current_user.username %}
+                            <span class="badge bg-primary">您</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if user.role.name == 'HIGH' %}
+                            <span class="badge bg-warning">{{ user.get_role_display() }}</span>
+                            {% elif user.role.name == 'MEDIUM' %}
+                            <span class="badge bg-success">{{ user.get_role_display() }}</span>
+                            {% else %}
+                            <span class="badge bg-danger">{{ user.get_role_display() }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ user.email or '-' }}</td>
+                        <td>{{ user.phone or '-' }}</td>
+                        <td>{{ user.last_login.strftime('%Y-%m-%d %H:%M') if user.last_login else '從未' }}</td>
+                        <td>{{ user.created_at.strftime('%Y-%m-%d') }}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-primary" onclick="editUser({{ user.id }})">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-outline-warning" onclick="changeUserPassword({{ user.id }})">
+                                    <i class="fas fa-key"></i>
+                                </button>
+                                {% if user.username != current_user.username %}
+                                <button class="btn btn-outline-danger" onclick="changeUserRole({{ user.id }})">
+                                    <i class="fas fa-user-shield"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 編輯用戶模態 -->
+<div class="modal fade" id="editUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">編輯用戶</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editUserForm">
+                    <input type="hidden" id="editUserId">
+                    <div class="mb-3">
+                        <label for="editUsername" class="form-label">用戶名</label>
+                        <input type="text" class="form-control" id="editUsername" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editEmail" class="form-label">電子郵件</label>
+                        <input type="email" class="form-control" id="editEmail">
+                    </div>
+                    <div class="mb-3">
+                        <label for="editPhone" class="form-label">電話號碼</label>
+                        <input type="tel" class="form-control" id="editPhone">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="saveUserChanges()">保存變更</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 更改密碼模態 -->
+<div class="modal fade" id="changePasswordModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">更改密碼</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="changePasswordForm">
+                    <input type="hidden" id="changePasswordUserId">
+                    <div class="mb-3">
+                        <label for="newUserPassword" class="form-label">新密碼</label>
+                        <input type="password" class="form-control" id="newUserPassword" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="confirmUserPassword" class="form-label">確認密碼</label>
+                        <input type="password" class="form-control" id="confirmUserPassword" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-warning" onclick="savePasswordChange()">更新密碼</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 更改權限模態 -->
+<div class="modal fade" id="changeRoleModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">更改用戶權限</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="changeRoleForm">
+                    <input type="hidden" id="changeRoleUserId">
+                    <div class="mb-3">
+                        <label for="newUserRole" class="form-label">權限等級</label>
+                        <select class="form-control" id="newUserRole" required>
+                            <option value="high">高 - 隊長權限（所有功能）</option>
+                            <option value="medium">中 - 基本功能</option>
+                            <option value="low">低 - 受限用戶（警告狀態）</option>
+                        </select>
+                    </div>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        注意：低權限用戶將無法使用任何功能，且會看到警告訊息
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-danger" onclick="saveRoleChange()">更新權限</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function editUser(userId) {
+    // 獲取用戶資料並填入表單
+    document.getElementById('editUserId').value = userId;
+    new bootstrap.Modal(document.getElementById('editUserModal')).show();
+}
+
+function changeUserPassword(userId) {
+    document.getElementById('changePasswordUserId').value = userId;
+    new bootstrap.Modal(document.getElementById('changePasswordModal')).show();
+}
+
+function changeUserRole(userId) {
+    document.getElementById('changeRoleUserId').value = userId;
+    new bootstrap.Modal(document.getElementById('changeRoleModal')).show();
+}
+
+function savePasswordChange() {
+    const userId = document.getElementById('changePasswordUserId').value;
+    const newPassword = document.getElementById('newUserPassword').value;
+    const confirmPassword = document.getElementById('confirmUserPassword').value;
+    
+    if (newPassword !== confirmPassword) {
+        alert('兩次輸入的密碼不一致');
+        return;
+    }
+    
+    fetch('/api/admin/change-user-password', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            user_id: userId,
+            new_password: newPassword
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('密碼已更新！');
+            location.reload();
+        } else {
+            alert('更新失敗：' + data.error);
+        }
+    });
+}
+
+function saveRoleChange() {
+    const userId = document.getElementById('changeRoleUserId').value;
+    const newRole = document.getElementById('newUserRole').value;
+    
+    fetch('/api/admin/update-user-role', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            user_id: userId,
+            role: newRole
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('權限已更新！');
+            location.reload();
+        } else {
+            alert('更新失敗：' + data.error);
+        }
+    });
+}
+
+function checkBotStatus() {
+    // 實現狀態檢查
+    document.getElementById('statusIndicator').innerHTML = '🟢 在線';
+}
+</script>
+{% endblock %}

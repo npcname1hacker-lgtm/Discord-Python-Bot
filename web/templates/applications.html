@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block title %}申請管理 - ɢʀᴠ戰隊管理系統{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2><i class="fas fa-clipboard-list"></i> 申請管理</h2>
+        <p class="text-muted">管理戰隊加入申請</p>
+    </div>
+</div>
+
+{% if applications %}
+<div class="row">
+    {% for app in applications %}
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">申請 #{{ app.id }}</h6>
+                <span class="badge bg-warning">待審核</span>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-3">
+                        {% if app.avatar_url %}
+                        <img src="{{ app.avatar_url }}" class="rounded-circle" width="60" height="60">
+                        {% else %}
+                        <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center" style="width:60px;height:60px;">
+                            <i class="fas fa-user text-white"></i>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-9">
+                        <h6>{{ app.display_name }}</h6>
+                        <p class="text-muted mb-1">🎮 遊戲ID: {{ app.game_id }}</p>
+                        <p class="text-muted mb-1">📅 申請時間: {{ app.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                        {% if app.application_photos %}
+                        <p class="text-muted mb-0">📸 照片: {{ app.application_photos|length }} 張</p>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                {% if app.application_text %}
+                <hr>
+                <p class="small"><strong>申請說明:</strong><br>{{ app.application_text }}</p>
+                {% endif %}
+                
+                <div class="mt-3">
+                    <div class="btn-group w-100">
+                        <button class="btn btn-info btn-sm" onclick="viewApplication({{ app.id }})">
+                            <i class="fas fa-eye"></i> 查看詳情
+                        </button>
+                        <button class="btn btn-success btn-sm" onclick="approveApplication({{ app.id }})">
+                            <i class="fas fa-check"></i> 接受
+                        </button>
+                        <button class="btn btn-danger btn-sm" onclick="showRejectModal({{ app.id }})">
+                            <i class="fas fa-times"></i> 拒絕
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-info text-center">
+    <i class="fas fa-info-circle"></i> 目前沒有待審核的申請
+</div>
+{% endif %}
+
+<!-- 拒絕原因模態 -->
+<div class="modal fade" id="rejectModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">拒絕申請</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="rejectReason" class="form-label">拒絕原因</label>
+                    <textarea class="form-control" id="rejectReason" rows="4" placeholder="請輸入拒絕此申請的原因..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-danger" onclick="confirmReject()">確認拒絕</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentAppId = null;
+
+function viewApplication(appId) {
+    // 這裡可以展開顯示完整申請詳情
+    alert('查看申請詳情功能');
+}
+
+function approveApplication(appId) {
+    if (confirm('確定要接受這份申請嗎？')) {
+        fetch(`/api/application/${appId}/approve`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('申請已接受！');
+                location.reload();
+            } else {
+                alert('操作失敗：' + data.error);
+            }
+        });
+    }
+}
+
+function showRejectModal(appId) {
+    currentAppId = appId;
+    new bootstrap.Modal(document.getElementById('rejectModal')).show();
+}
+
+function confirmReject() {
+    const reason = document.getElementById('rejectReason').value;
+    if (!reason.trim()) {
+        alert('請輸入拒絕原因');
+        return;
+    }
+    
+    fetch(`/api/application/${currentAppId}/reject`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            reason: reason
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('申請已拒絕！');
+            location.reload();
+        } else {
+            alert('操作失敗：' + data.error);
+        }
+    });
+}
+</script>
+{% endblock %}

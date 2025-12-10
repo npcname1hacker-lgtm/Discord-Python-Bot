@@ -1,0 +1,690 @@
+{% extends "base.html" %}
+
+{% block title %}機器人控制 - ɢʀᴠ戰隊管理系統{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2><i class="fas fa-robot"></i> 機器人控制台</h2>
+        <p class="text-muted">管理Discord機器人功能</p>
+    </div>
+</div>
+
+<div class="row">
+    <!-- 讓機器人說話 -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-comment"></i> 讓機器人說話</h5>
+            </div>
+            <div class="card-body">
+                <form id="botSayForm">
+                    <div class="mb-3">
+                        <label for="channelSelect" class="form-label">選擇頻道</label>
+                        <select class="form-control" id="channelSelect">
+                            <option value="">選擇頻道...</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="botMessage" class="form-label">訊息內容</label>
+                        <textarea class="form-control" id="botMessage" rows="4" placeholder="請輸入要讓機器人說的話..."></textarea>
+                    </div>
+                    <button type="button" class="btn btn-primary" onclick="sendBotMessage()">
+                        <i class="fas fa-paper-plane"></i> 發送訊息
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 機器人狀態 -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-heartbeat"></i> 機器人狀態</h5>
+            </div>
+            <div class="card-body">
+                <div id="botStatus">
+                    <p><strong>狀態:</strong> <span id="statusIndicator">檢查中...</span></p>
+                    <p><strong>延遲:</strong> <span id="latency">-</span></p>
+                    <p><strong>連接的伺服器:</strong> <span id="guildCount">-</span></p>
+                    <p><strong>總成員數:</strong> <span id="memberCount">-</span></p>
+                </div>
+                <button class="btn btn-warning" onclick="restartBot()">
+                    <i class="fas fa-redo"></i> 重啟機器人
+                </button>
+                <button class="btn btn-info" onclick="checkBotStatus()">
+                    <i class="fas fa-sync"></i> 刷新狀態
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if current_user.role.name == 'HIGH' %}
+<!-- 隊長專屬功能 -->
+<div class="row">
+    <!-- 機器人重啟 -->
+    <div class="col-md-6 mb-4">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h5><i class="fas fa-crown"></i> 隊長專屬 - 機器人重啟</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">重啟機器人以應用最新配置</p>
+                <button class="btn btn-danger" onclick="confirmRestartBot()">
+                    <i class="fas fa-power-off"></i> 重啟機器人
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 機器人活動狀態 -->
+    <div class="col-md-6 mb-4">
+        <div class="card border-info">
+            <div class="card-header bg-info text-white">
+                <h5><i class="fas fa-crown"></i> 隊長專屬 - 機器人活動狀態</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="botActivity" class="form-label">機器人狀態</label>
+                    <input type="text" class="form-control" id="botActivity" placeholder="例如: 守護戰隊">
+                </div>
+                <button class="btn btn-info" onclick="updateBotActivity()">
+                    <i class="fas fa-check"></i> 更新狀態
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 文字頻道控制 -->
+<div class="row">
+    <div class="col-12 mb-4">
+        <div class="card border-warning">
+            <div class="card-header bg-warning text-dark">
+                <h5><i class="fas fa-comments"></i> 文字頻道控制</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="textChannelSelect" class="form-label">選擇頻道</label>
+                        <select class="form-control" id="textChannelSelect" onchange="loadTextChannelMembers()">
+                            <option value="">選擇頻道...</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="userToModerate" class="form-label">選擇成員</label>
+                        <select class="form-control" id="userToModerate">
+                            <option value="">選擇成員...</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-warning" onclick="muteTextUser()">
+                        <i class="fas fa-mute"></i> 禁言
+                    </button>
+                    <button type="button" class="btn btn-danger" onclick="kickTextUser()">
+                        <i class="fas fa-sign-out-alt"></i> 踢出
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 語音頻道控制 -->
+<div class="row">
+    <div class="col-12 mb-4">
+        <div class="card border-success">
+            <div class="card-header bg-success text-white">
+                <h5><i class="fas fa-microphone"></i> 語音頻道控制</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="voiceChannelSelect" class="form-label">選擇語音頻道</label>
+                        <select class="form-control" id="voiceChannelSelect" onchange="loadVoiceChannelMembers()">
+                            <option value="">選擇語音頻道...</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="voiceUserToModerate" class="form-label">選擇成員</label>
+                        <select class="form-control" id="voiceUserToModerate">
+                            <option value="">選擇成員...</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-success" onclick="joinVoiceChannel()">
+                        <i class="fas fa-sign-in-alt"></i> 加入
+                    </button>
+                    <button type="button" class="btn btn-warning" onclick="leaveVoiceChannel()">
+                        <i class="fas fa-sign-out-alt"></i> 退出
+                    </button>
+                    <button type="button" class="btn btn-info" onclick="muteVoiceUser()">
+                        <i class="fas fa-volume-mute"></i> 禁言
+                    </button>
+                    <button type="button" class="btn btn-info" onclick="unmuteVoiceUser()">
+                        <i class="fas fa-volume-up"></i> 解禁言
+                    </button>
+                    <button type="button" class="btn btn-warning" onclick="deafenVoiceUser()">
+                        <i class="fas fa-deaf"></i> 失聰
+                    </button>
+                    <button type="button" class="btn btn-warning" onclick="undeafenVoiceUser()">
+                        <i class="fas fa-ear"></i> 解失聰
+                    </button>
+                    <button type="button" class="btn btn-danger" onclick="kickVoiceUser()">
+                        <i class="fas fa-sign-out-alt"></i> 踢出
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 敏感詞過濾 -->
+<div class="row">
+    <div class="col-12 mb-4">
+        <div class="card border-secondary">
+            <div class="card-header bg-secondary text-white">
+                <h5><i class="fas fa-filter"></i> 敏感詞過濾管理</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="sensitiveWord" class="form-label">新增敏感詞</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="sensitiveWord" placeholder="輸入要過濾的詞彙">
+                        <button class="btn btn-secondary" type="button" onclick="addSensitiveWord()">
+                            <i class="fas fa-plus"></i> 新增
+                        </button>
+                    </div>
+                </div>
+                <div id="sensitiveWordsList" class="mt-3">
+                    <p class="text-muted">敏感詞列表載入中...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script>
+function sendBotMessage() {
+    const channel = document.getElementById('channelSelect').value;
+    const message = document.getElementById('botMessage').value;
+    
+    if (!channel || !message.trim()) {
+        alert('請選擇頻道並輸入訊息');
+        return;
+    }
+    
+    fetch('/api/bot/say', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            channel_id: channel,
+            message: message
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('訊息已發送！');
+            document.getElementById('botMessage').value = '';
+        } else {
+            alert('發送失敗：' + data.error);
+        }
+    });
+}
+
+function checkBotStatus() {
+    // 實現機器人狀態檢查
+    fetch('/api/bot/status')
+    .then(response => response.json())
+    .then(data => {
+        document.getElementById('statusIndicator').innerHTML = data.online ? '🟢 在線' : '🔴 離線';
+        document.getElementById('latency').textContent = data.latency + 'ms';
+        document.getElementById('guildCount').textContent = data.guild_count;
+        document.getElementById('memberCount').textContent = data.member_count;
+    });
+}
+
+function restartBot() {
+    if (confirm('確定要重啟機器人嗎？')) {
+        fetch('/api/bot/restart', {method: 'POST'})
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                alert('機器人正在重啟，請稍候...');
+            } else {
+                alert('錯誤: ' + data.error);
+            }
+        });
+    }
+}
+
+function confirmRestartBot() {
+    if (confirm('確定要重啟機器人？這可能需要幾秒鐘')) {
+        restartBot();
+    }
+}
+
+function updateBotActivity() {
+    const activity = document.getElementById('botActivity').value;
+    if (!activity.trim()) {
+        alert('請輸入機器人狀態');
+        return;
+    }
+    
+    fetch('/api/bot/activity', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({activity: activity})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            alert('機器人狀態已更新！');
+        } else {
+            alert('更新失敗: ' + data.error);
+        }
+    });
+}
+
+function muteTextUser() {
+    const channel = document.getElementById('textChannelSelect').value;
+    const user = document.getElementById('userToModerate').value;
+    if (!channel || !user) {
+        alert('請選擇頻道和成員');
+        return;
+    }
+    
+    fetch('/api/channel/mute', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({channel_id: channel, user_id: user})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) alert('已禁言！');
+        else alert('錯誤: ' + data.error);
+    });
+}
+
+function kickTextUser() {
+    const channel = document.getElementById('textChannelSelect').value;
+    const user = document.getElementById('userToModerate').value;
+    if (!channel || !user) {
+        alert('請選擇頻道和成員');
+        return;
+    }
+    
+    fetch('/api/channel/kick', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({channel_id: channel, user_id: user})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) alert('已踢出！');
+        else alert('錯誤: ' + data.error);
+    });
+}
+
+function muteVoiceUser() {
+    const channel = document.getElementById('voiceChannelSelect').value;
+    const user = document.getElementById('voiceUserToModerate').value;
+    if (!channel || !user) {
+        alert('請選擇語音頻道和成員');
+        return;
+    }
+    
+    fetch('/api/voice/mute', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({channel_id: channel, user_id: user})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) alert('已禁言！');
+        else alert('錯誤: ' + data.error);
+    });
+}
+
+function deafenVoiceUser() {
+    const channel = document.getElementById('voiceChannelSelect').value;
+    const user = document.getElementById('voiceUserToModerate').value;
+    if (!channel || !user) {
+        alert('請選擇語音頻道和成員');
+        return;
+    }
+    
+    fetch('/api/voice/deafen', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({channel_id: channel, user_id: user})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) alert('已失聰！');
+        else alert('錯誤: ' + data.error);
+    });
+}
+
+function kickVoiceUser() {
+    const channel = document.getElementById('voiceChannelSelect').value;
+    const user = document.getElementById('voiceUserToModerate').value;
+    if (!channel || !user) {
+        alert('請選擇語音頻道和成員');
+        return;
+    }
+    
+    fetch('/api/voice/kick', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({channel_id: channel, user_id: user})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) alert('已踢出！');
+        else alert('錯誤: ' + data.error);
+    });
+}
+
+function unmuteVoiceUser() {
+    const channel = document.getElementById('voiceChannelSelect').value;
+    const user = document.getElementById('voiceUserToModerate').value;
+    if (!channel || !user) {
+        alert('請選擇語音頻道和成員');
+        return;
+    }
+    
+    fetch('/api/voice/unmute', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({channel_id: channel, user_id: user})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) alert('已解除禁言！');
+        else alert('錯誤: ' + data.error);
+    });
+}
+
+function undeafenVoiceUser() {
+    const channel = document.getElementById('voiceChannelSelect').value;
+    const user = document.getElementById('voiceUserToModerate').value;
+    if (!channel || !user) {
+        alert('請選擇語音頻道和成員');
+        return;
+    }
+    
+    fetch('/api/voice/undeafen', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({channel_id: channel, user_id: user})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) alert('已解除失聰！');
+        else alert('錯誤: ' + data.error);
+    });
+}
+
+function leaveVoiceChannel() {
+    fetch('/api/voice/leave', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'}
+    })
+    .then(r => r.json())
+    .then(data => {
+        alert(data.message || data.error);
+        if (data.success) {
+            document.getElementById('voiceUserToModerate').innerHTML = '<option value="">選擇成員...</option>';
+        }
+    });
+}
+
+function botSpeak() {
+    const text = document.getElementById('ttsText').value;
+    if (!text.trim()) {
+        alert('請輸入文字');
+        return;
+    }
+    
+    fetch('/api/voice/tts', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({text: text})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            alert('機器人正在說話...');
+            document.getElementById('ttsText').value = '';
+        } else {
+            alert('錯誤: ' + data.error);
+        }
+    });
+}
+
+function addSensitiveWord() {
+    const word = document.getElementById('sensitiveWord').value;
+    if (!word.trim()) {
+        alert('請輸入敏感詞');
+        return;
+    }
+    
+    fetch('/api/filter/add', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({word: word})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            alert('已新增敏感詞');
+            document.getElementById('sensitiveWord').value = '';
+            loadSensitiveWords();
+        } else {
+            alert('錯誤: ' + data.error);
+        }
+    });
+}
+
+function loadSensitiveWords() {
+    fetch('/api/filter/list')
+    .then(r => r.json())
+    .then(data => {
+        const list = document.getElementById('sensitiveWordsList');
+        if (data.words && data.words.length > 0) {
+            let html = '<ul class="list-group">';
+            data.words.forEach(w => {
+                html += `<li class="list-group-item d-flex justify-content-between align-items-center">
+                    ${w}
+                    <button class="btn btn-sm btn-danger" onclick="removeSensitiveWord('${w}')">刪除</button>
+                </li>`;
+            });
+            html += '</ul>';
+            list.innerHTML = html;
+        } else {
+            list.innerHTML = '<p class="text-muted">暫無敏感詞</p>';
+        }
+    });
+}
+
+function removeSensitiveWord(word) {
+    fetch('/api/filter/remove', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({word: word})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            loadSensitiveWords();
+        }
+    });
+}
+
+// 載入頻道列表
+async function loadChannels() {
+    try {
+        const response = await fetch('/api/bot/channels');
+        const data = await response.json();
+        
+        const select = document.getElementById('channelSelect');
+        select.innerHTML = '<option value="">選擇頻道...</option>';
+        
+        if (data.channels) {
+            data.channels.forEach(channel => {
+                const option = document.createElement('option');
+                option.value = channel.id;
+                option.textContent = `${channel.guild_name} - ${channel.name}`;
+                select.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error('載入頻道列表失敗:', error);
+    }
+}
+
+// 載入文字頻道
+async function loadTextChannels() {
+    try {
+        const response = await fetch('/api/channels/text-channels');
+        const data = await response.json();
+        
+        const select = document.getElementById('textChannelSelect');
+        select.innerHTML = '<option value="">選擇頻道...</option>';
+        
+        if (data.channels) {
+            data.channels.forEach(channel => {
+                const option = document.createElement('option');
+                option.value = channel.id;
+                option.textContent = `${channel.guild_name} - ${channel.name}`;
+                select.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error('載入文字頻道失敗:', error);
+    }
+}
+
+// 載入語音頻道
+async function loadVoiceChannels() {
+    try {
+        const response = await fetch('/api/channels/voice-channels');
+        const data = await response.json();
+        
+        const select = document.getElementById('voiceChannelSelect');
+        select.innerHTML = '<option value="">選擇語音頻道...</option>';
+        
+        if (data.channels) {
+            data.channels.forEach(channel => {
+                const option = document.createElement('option');
+                option.value = channel.id;
+                option.textContent = `${channel.guild_name} - ${channel.name}`;
+                select.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error('載入語音頻道失敗:', error);
+    }
+}
+
+// 載入文字頻道成員
+async function loadTextChannelMembers() {
+    const channelId = document.getElementById('textChannelSelect').value;
+    if (!channelId) {
+        document.getElementById('userToModerate').innerHTML = '<option value="">選擇成員...</option>';
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/channels/${channelId}/members`);
+        const data = await response.json();
+        
+        const select = document.getElementById('userToModerate');
+        select.innerHTML = '<option value="">選擇成員...</option>';
+        
+        if (data.members) {
+            data.members.forEach(member => {
+                const option = document.createElement('option');
+                option.value = member.id;
+                option.textContent = member.nick;
+                select.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error('載入文字頻道成員失敗:', error);
+    }
+}
+
+// 載入語音頻道成員
+async function loadVoiceChannelMembers() {
+    const channelId = document.getElementById('voiceChannelSelect').value;
+    if (!channelId) {
+        document.getElementById('voiceUserToModerate').innerHTML = '<option value="">選擇成員...</option>';
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/channels/${channelId}/members`);
+        const data = await response.json();
+        
+        const select = document.getElementById('voiceUserToModerate');
+        select.innerHTML = '<option value="">選擇成員...</option>';
+        
+        if (data.members) {
+            data.members.forEach(member => {
+                const option = document.createElement('option');
+                option.value = member.id;
+                option.textContent = member.nick;
+                select.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error('載入語音頻道成員失敗:', error);
+    }
+}
+
+// 機器人加入語音頻道
+function joinVoiceChannel() {
+    const channelId = document.getElementById('voiceChannelSelect').value;
+    if (!channelId) {
+        alert('請選擇語音頻道');
+        return;
+    }
+    
+    fetch('/api/voice/join', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({channel_id: channelId})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            alert('機器人已加入！');
+            setTimeout(loadVoiceChannelMembers, 1000);
+        } else {
+            alert('加入失敗: ' + data.error);
+        }
+    });
+}
+
+// 頁面載入時檢查機器人狀態和載入頻道
+window.onload = function() {
+    checkBotStatus();
+    loadChannels();
+    loadTextChannels();
+    loadVoiceChannels();
+    {% if current_user.role.name == 'HIGH' %}
+    loadSensitiveWords();
+    {% endif %}
+};
+</script>
+{% endblock %}

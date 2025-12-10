@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+
+{% block title %}頻道管理 - ɢʀᴠ戰隊管理系統{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2><i class="fas fa-comments"></i> 頻道管理</h2>
+    </div>
+</div>
+
+<ul class="nav nav-tabs mb-4">
+    <li class="nav-item">
+        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#textChannels" type="button">
+            <i class="fas fa-comments"></i> 文字頻道
+        </button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#voiceChannels" type="button">
+            <i class="fas fa-microphone-alt"></i> 語音頻道
+        </button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#announcements" type="button">
+            <i class="fas fa-megaphone"></i> 公告設置
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content">
+    <!-- 文字頻道 -->
+    <div class="tab-pane fade show active" id="textChannels">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5>文字頻道列表</h5>
+            </div>
+            <div class="card-body">
+                <table class="table" id="textChannelsTable">
+                    <thead>
+                        <tr>
+                            <th>頻道名稱</th>
+                            <th>ID</th>
+                            <th>主題</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 語音頻道 -->
+    <div class="tab-pane fade" id="voiceChannels">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5>語音頻道列表</h5>
+            </div>
+            <div class="card-body">
+                <table class="table" id="voiceChannelsTable">
+                    <thead>
+                        <tr>
+                            <th>頻道名稱</th>
+                            <th>ID</th>
+                            <th>使用者上限</th>
+                            <th>目前人數</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 公告設置 -->
+    <div class="tab-pane fade" id="announcements">
+        <div class="card mb-3">
+            <div class="card-header bg-warning text-dark">
+                <h5>論壇頻道（公告用）</h5>
+            </div>
+            <div class="card-body">
+                <table class="table" id="forumChannelsTable">
+                    <thead>
+                        <tr>
+                            <th>頻道名稱</th>
+                            <th>ID</th>
+                            <th>類型</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h5>發送公告</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="announcementChannel" class="form-label">選擇公告頻道</label>
+                    <select class="form-control" id="announcementChannel">
+                        <option value="">-- 選擇頻道 --</option>
+                        <option value="1410846655980503040" selected>📢 ɢʀᴠ公告頻道（預設）</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="announcementTitle" class="form-label">標題</label>
+                    <input type="text" class="form-control" id="announcementTitle" placeholder="輸入公告標題...">
+                </div>
+                <div class="mb-3">
+                    <label for="announcementContent" class="form-label">內容</label>
+                    <textarea class="form-control" id="announcementContent" rows="5" placeholder="輸入公告內容..."></textarea>
+                </div>
+                <button class="btn btn-warning" onclick="sendAnnouncement()">
+                    <i class="fas fa-send"></i> 發送公告
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 載入所有頻道
+fetch('/api/bot/channels')
+    .then(res => res.json())
+    .then(data => {
+        const textTbody = document.querySelector('#textChannelsTable tbody');
+        const voiceTbody = document.querySelector('#voiceChannelsTable tbody');
+        const forumTbody = document.querySelector('#forumChannelsTable tbody');
+        const select = document.getElementById('announcementChannel');
+        
+        if (data.channels) {
+            data.channels.forEach(ch => {
+                const row = textTbody.insertRow();
+                row.innerHTML = `<td>${ch.name}</td><td>${ch.id}</td><td>--</td><td><button class="btn btn-sm btn-info">查看</button></td>`;
+                
+                const option = document.createElement('option');
+                option.value = ch.id;
+                option.textContent = ch.name;
+                select.appendChild(option);
+            });
+        }
+        
+        // 論壇頻道（暫時使用相同的頻道列表，實際應該只顯示論壇頻道）
+        if (data.channels) {
+            data.channels.forEach(ch => {
+                const row = forumTbody.insertRow();
+                row.innerHTML = `<td>${ch.name}</td><td>${ch.id}</td><td>論壇</td><td><button class="btn btn-sm btn-success">使用此頻道</button></td>`;
+            });
+        }
+    })
+    .catch(err => console.error('載入頻道失敗', err));
+
+function sendAnnouncement() {
+    const channelId = document.getElementById('announcementChannel').value;
+    const title = document.getElementById('announcementTitle').value;
+    const content = document.getElementById('announcementContent').value;
+    
+    if (!channelId || !title || !content) {
+        alert('請填寫所有欄位');
+        return;
+    }
+    
+    fetch('/api/channels/send-announcement', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            channel_id: channelId,
+            title: title,
+            content: content
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            alert('公告已發送！');
+            document.getElementById('announcementTitle').value = '';
+            document.getElementById('announcementContent').value = '';
+        } else {
+            alert('發送失敗：' + (data.error || '未知錯誤'));
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        alert('發送出錯');
+    });
+}
+</script>
+{% endblock %}

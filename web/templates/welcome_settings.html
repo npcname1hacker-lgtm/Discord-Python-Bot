@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+
+{% block title %}歡迎設置{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h4>👋 歡迎設置</h4>
+                    <small>為新成員設置自動改名和歡迎訊息</small>
+                </div>
+                <div class="card-body">
+                    <form id="welcomeForm">
+                        <div class="mb-3">
+                            <label for="isEnabled" class="form-label">啟用歡迎功能</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="isEnabled" name="isEnabled" checked>
+                                <label class="form-check-label" for="isEnabled">
+                                    啟用新成員歡迎功能
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="channelId" class="form-label">歡迎頻道</label>
+                            <select class="form-control" id="channelId" required>
+                                <option value="">-- 選擇頻道 --</option>
+                            </select>
+                            <small class="text-muted">預設: 1411609976329338933</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="messageTemplate" class="form-label">歡迎訊息模板</label>
+                            <textarea class="form-control" id="messageTemplate" rows="4" placeholder="歡迎 {username} 加入 {servername}！">歡迎 {username} 加入 {servername}！</textarea>
+                            <small class="text-muted d-block mt-2">
+                                <strong>可用參數：</strong><br>
+                                • {username} - 新成員的暱稱<br>
+                                • {servername} - 伺服器名稱
+                            </small>
+                        </div>
+
+                        <hr>
+
+                        <div class="mb-3">
+                            <h5>自動改名設置</h5>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="autoRenameEnabled" class="form-label">啟用自動改名</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="autoRenameEnabled" name="autoRenameEnabled" checked>
+                                <label class="form-check-label" for="autoRenameEnabled">
+                                    新成員加入時自動改名
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="renamePrefix" class="form-label">改名前綴</label>
+                            <input type="text" class="form-control" id="renamePrefix" value="ɢʀᴠ." placeholder="ɢʀᴠ.">
+                            <small class="text-muted">例: ɢʀᴠ.username</small>
+                        </div>
+
+                        <div class="alert alert-info mt-3">
+                            <strong>示例：</strong><br>
+                            如果新成員暱稱是 "傳奇"，將被改名為 "ɢʀᴠ.傳奇"<br>
+                            歡迎訊息將顯示: "歡迎 傳奇 加入 ɢʀᴠ戰隊群！"
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="button" class="btn btn-success" onclick="saveWelcomeSettings()">
+                                <i class="fas fa-save"></i> 保存設置
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 載入頻道列表
+fetch('/api/bot/channels')
+    .then(res => res.json())
+    .then(data => {
+        const select = document.getElementById('channelId');
+        if (data.channels) {
+            data.channels.forEach(ch => {
+                const option = document.createElement('option');
+                option.value = ch.id;
+                option.textContent = `📝 ${ch.name}`;
+                // 設置預設頻道
+                if (ch.id === '1411609976329338933') {
+                    option.selected = true;
+                }
+                select.appendChild(option);
+            });
+        }
+    })
+    .catch(err => console.error('載入頻道失敗', err));
+
+// 載入已保存的設置
+fetch('/api/bot/channels')
+    .then(res => res.json())
+    .then(data => {
+        // 載入現有設置
+        const settings = {{ settings|tojson if settings else 'null' }};
+        if (settings) {
+            document.getElementById('isEnabled').checked = settings.is_enabled;
+            document.getElementById('channelId').value = settings.channel_id;
+            document.getElementById('messageTemplate').value = settings.message_template;
+            document.getElementById('autoRenameEnabled').checked = settings.auto_rename_enabled;
+            document.getElementById('renamePrefix').value = settings.rename_prefix;
+        } else {
+            // 使用預設值
+            document.getElementById('channelId').value = '1411609976329338933';
+        }
+    });
+
+function saveWelcomeSettings() {
+    const guildId = '{{ guild_id }}';
+    const channelId = document.getElementById('channelId').value;
+    const messageTemplate = document.getElementById('messageTemplate').value;
+    const autoRenameEnabled = document.getElementById('autoRenameEnabled').checked;
+    const renamePrefix = document.getElementById('renamePrefix').value;
+    const isEnabled = document.getElementById('isEnabled').checked;
+    
+    if (!channelId) {
+        alert('請選擇歡迎頻道');
+        return;
+    }
+    
+    if (!messageTemplate.trim()) {
+        alert('請輸入歡迎訊息');
+        return;
+    }
+    
+    fetch('/api/welcome/save', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            guild_id: guildId,
+            channel_id: channelId,
+            message_template: messageTemplate,
+            auto_rename_enabled: autoRenameEnabled,
+            rename_prefix: renamePrefix,
+            is_enabled: isEnabled
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            alert('✅ 歡迎設置已保存！');
+        } else {
+            alert('❌ 保存失敗: ' + data.error);
+        }
+    })
+    .catch(err => {
+        console.error('保存失敗', err);
+        alert('❌ 保存失敗: ' + err.message);
+    });
+}
+</script>
+{% endblock %}

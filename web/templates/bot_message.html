@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}機器人說話 - ɢʀᴠ戰隊管理系統{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2><i class="fas fa-microphone"></i> 機器人說話</h2>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header bg-primary text-white">
+        <h5>發送訊息到頻道</h5>
+    </div>
+    <div class="card-body">
+        <form id="messageForm">
+            <div class="mb-3">
+                <label for="channel" class="form-label">選擇頻道</label>
+                <select class="form-control" id="channel" required>
+                    <option value="">-- 選擇頻道 --</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="message" class="form-label">訊息內容</label>
+                <textarea class="form-control" id="message" rows="5" required placeholder="輸入要發送的訊息..."></textarea>
+            </div>
+            <button type="button" class="btn btn-primary" onclick="sendMessage()">
+                <i class="fas fa-paper-plane"></i> 發送訊息
+            </button>
+            <small class="text-muted d-block mt-2">提示：訊息會以機器人身份發送到選定的頻道</small>
+        </form>
+    </div>
+</div>
+
+<script>
+// 載入頻道列表
+fetch('/api/bot/channels')
+    .then(res => res.json())
+    .then(data => {
+        const select = document.getElementById('channel');
+        if (data.channels) {
+            data.channels.forEach(ch => {
+                const option = document.createElement('option');
+                option.value = ch.id;
+                option.textContent = ch.name;
+                select.appendChild(option);
+            });
+        }
+    })
+    .catch(err => console.error('載入頻道失敗', err));
+
+function sendMessage() {
+    const channel = document.getElementById('channel').value;
+    const message = document.getElementById('message').value;
+    
+    if (!channel || !message) {
+        alert('請選擇頻道並輸入訊息');
+        return;
+    }
+    
+    fetch('/api/bot/say', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({channel_id: channel, message: message})
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            alert('訊息已發送！');
+            document.getElementById('message').value = '';
+        } else {
+            alert('發送失敗：' + data.error);
+        }
+    });
+}
+</script>
+{% endblock %}

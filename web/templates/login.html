@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% block title %}登錄 - ɢʀᴠ戰隊管理系統{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header text-center bg-primary text-white">
+                <h3><i class="fas fa-gamepad"></i> ɢʀᴠ戰隊管理系統</h3>
+                <p class="mb-0">戰隊專屬管理面板</p>
+            </div>
+            <div class="card-body">
+                <form id="loginForm" method="POST">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">
+                            <i class="fas fa-user"></i> 用戶名
+                        </label>
+                        <input type="text" class="form-control" id="username" name="username" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="password" class="form-label">
+                            <i class="fas fa-lock"></i> 密碼
+                        </label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                    </div>
+                    
+                    <!-- 機器人驗證 -->
+                    <div class="mb-3" id="botVerificationDiv" style="display: none;">
+                        <label for="botVerificationCode" class="form-label">
+                            <i class="fas fa-robot"></i> 機器人驗證碼
+                        </label>
+                        <input type="text" class="form-control" id="botVerificationCode" name="botVerificationCode" placeholder="輸入機器人發送的驗證碼">
+                        <small class="form-text text-muted">驗證碼已通過 Discord 發送給你</small>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary" id="loginBtn">
+                            <i class="fas fa-sign-in-alt"></i> 登錄
+                        </button>
+                        <a href="{{ url_for('register') }}" class="btn btn-outline-success">
+                            <i class="fas fa-user-plus"></i> 註冊新帳號
+                        </a>
+                        <button type="button" class="btn btn-outline-secondary" onclick="showForgotPassword()">
+                            <i class="fas fa-question-circle"></i> 忘記密碼？
+                        </button>
+                    </div>
+                </form>
+                
+                <!-- 機器人驗證狀態 -->
+                <div id="verificationStatus" class="mt-3" style="display: none;">
+                    <div class="alert alert-info">
+                        <i class="fas fa-spinner fa-spin"></i> 檢查機器人連接...
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer text-center text-muted">
+                <small>V1.00.8 | 創作者：ɢʀᴠ戰隊隊長殤嵐</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 忘記密碼模態 -->
+<div class="modal fade" id="forgotPasswordModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-key"></i> 忘記密碼</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small">驗證碼將通過 Discord 私訊發送給隊長</p>
+                <form id="forgotPasswordForm">
+                    <div class="mb-3">
+                        <label for="forgotUsername" class="form-label">用戶名</label>
+                        <input type="text" class="form-control" id="forgotUsername" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="sendResetCode()">
+                    <i class="fas fa-paper-plane"></i> 發送驗證碼
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 檢查機器人驗證狀態
+async function checkBotVerification() {
+    try {
+        const response = await fetch('/api/bot/check-verification');
+        const data = await response.json();
+        
+        if (data.requires_verification) {
+            document.getElementById('botVerificationDiv').style.display = 'block';
+            document.getElementById('loginForm').addEventListener('submit', requireBotVerification, true);
+        }
+    } catch (error) {
+        console.error('機器人驗證檢查失敗:', error);
+    }
+}
+
+function requireBotVerification(e) {
+    const botCode = document.getElementById('botVerificationCode').value;
+    if (!botCode.trim()) {
+        e.preventDefault();
+        alert('請輸入機器人驗證碼');
+    }
+}
+
+function showForgotPassword() {
+    new bootstrap.Modal(document.getElementById('forgotPasswordModal')).show();
+}
+
+function sendResetCode() {
+    const username = document.getElementById('forgotUsername').value;
+    if (!username.trim()) {
+        alert('請輸入用戶名');
+        return;
+    }
+    
+    fetch('/api/forgot-password', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({username: username.trim()})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            alert('驗證碼已發送至隊長的 Discord 私訊！');
+            bootstrap.Modal.getInstance(document.getElementById('forgotPasswordModal')).hide();
+            window.location.href = '/forgot-password?username=' + encodeURIComponent(username);
+        } else {
+            alert('錯誤: ' + data.error);
+        }
+    })
+    .catch(e => alert('發送失敗，請稍後重試'));
+}
+
+// 頁面載入時檢查機器人驗證
+document.addEventListener('DOMContentLoaded', checkBotVerification);
+</script>
+{% endblock %}
