@@ -7,8 +7,6 @@ import discord
 from discord.ext import commands
 import logging
 import os
-import lavalink
-import wavelink
 from config import Config
 from commands import setup_commands
 from application_system import setup_application_system
@@ -19,51 +17,24 @@ class DiscordBot:
         """初始化Discord機器人"""
         self.logger = logging.getLogger(__name__)
         self.config = Config()
-        self.lavalink_active = False
-        self.voice_clients = {}  # 存儲每個伺服器的語音客戶端
+        self.voice_clients = {}
         
-        # 設置機器人意圖 (Intents)
         intents = discord.Intents.default()
-        intents.message_content = True  # 需要讀取訊息內容
+        intents.message_content = True
         intents.guilds = True
         intents.guild_messages = True
         intents.voice_states = True
-        intents.members = True  # 必須啟用才能訪問成員列表
+        intents.members = True
         
-        # 創建機器人實例
         self.bot = commands.Bot(
             command_prefix=self.config.COMMAND_PREFIX,
             intents=intents,
-            help_command=None  # 禁用預設的help指令，我們會自己實現
+            help_command=None
         )
         
-        # 設置事件處理器
         self.setup_events()
-        
-        # 設置指令
         setup_commands(self.bot)
-        
-        # 設置申請系統
         setup_application_system(self.bot)
-        
-        # Lavalink 會在 on_ready 時初始化
-    
-    async def setup_lavalink(self):
-        """初始化 Wavelink (Lavalink) 連接"""
-        try:
-            # Wavelink 會自動連接到 Lavalink
-            # 在 Wispbyte 部署時，使用以下連接方式：
-            lavalink_url = os.getenv('LAVALINK_URL', 'http://localhost:2333')
-            lavalink_password = os.getenv('LAVALINK_PASSWORD', 'youshallnotpass')
-            
-            # 創建 Lavalink 節點
-            node = wavelink.Node(uri=lavalink_url, password=lavalink_password)
-            
-            # 使用 on_ready 連接，不在初始化時連接
-            self.logger.info(f"✅ Wavelink 已配置，將在機器人準備就緒時連接到 {lavalink_url}")
-            
-        except Exception as e:
-            self.logger.warning(f"⚠️ Wavelink 初始化警告: {str(e)}")
     
     def setup_events(self):
         """設置機器人事件處理器"""
@@ -75,29 +46,9 @@ class DiscordBot:
             self.logger.info(f'機器人ID: {self.bot.user.id if self.bot.user else "未知"}')
             self.logger.info(f'已連接到 {len(self.bot.guilds)} 個伺服器')
             
-            # 設置機器人狀態
             activity = discord.Game(name=self.config.BOT_STATUS)
             await self.bot.change_presence(status=discord.Status.online, activity=activity)
             
-            # 連接 Wavelink (Lavalink) - 僅在設置了 LAVALINK_URL 時嘗試連接
-            lavalink_url = os.getenv('LAVALINK_URL', '')
-            if lavalink_url:
-                try:
-                    lavalink_password = os.getenv('LAVALINK_PASSWORD', 'youshallnotpass')
-                    
-                    node = wavelink.Node(uri=lavalink_url, password=lavalink_password)
-                    await wavelink.Pool.connect(client=self.bot, nodes=[node])
-                    self.logger.info(f"✅ Wavelink 已連接到 {lavalink_url}")
-                    self.lavalink_active = True
-                    
-                except Exception as e:
-                    self.logger.warning(f"⚠️ Wavelink 連接失敗 (音樂功能不可用): {str(e)}")
-                    self.lavalink_active = False
-            else:
-                self.logger.info("ℹ️ Lavalink 未配置，音樂功能已禁用")
-                self.lavalink_active = False
-            
-            # 列出所有連接的伺服器
             for guild in self.bot.guilds:
                 self.logger.info(f'已連接伺服器: {guild.name} (ID: {guild.id})')
         
@@ -106,10 +57,8 @@ class DiscordBot:
             """機器人加入新伺服器時觸發"""
             self.logger.info(f'機器人已加入新伺服器: {guild.name} (ID: {guild.id})')
             
-            # 尋找系統頻道或第一個文字頻道發送歡迎訊息
             channel = guild.system_channel
             if not channel:
-                # 如果沒有系統頻道，找第一個可以發送訊息的文字頻道
                 for ch in guild.text_channels:
                     if ch.permissions_for(guild.me).send_messages:
                         channel = ch
@@ -138,7 +87,6 @@ class DiscordBot:
                 from web_models import get_web_database
                 web_db = get_web_database()
                 
-                # 獲取該伺服器的歡迎設置
                 session = web_db.get_session()
                 welcome_settings = session.query(WelcomeSettings).filter_by(
                     guild_id=str(member.guild.id),
@@ -149,7 +97,6 @@ class DiscordBot:
                 if not welcome_settings:
                     return
                 
-                # 1. 自動改名
                 if welcome_settings.auto_rename_enabled:
                     try:
                         new_name = f"{welcome_settings.rename_prefix}{member.name}"
@@ -160,11 +107,9 @@ class DiscordBot:
                     except Exception as e:
                         self.logger.warning(f"改名失敗: {e}")
                 
-                # 2. 發送歡迎訊息
                 try:
                     channel = self.bot.get_channel(int(welcome_settings.channel_id))
                     if channel:
-                        # 替換參數
                         message = welcome_settings.message_template.format(
                             username=member.name,
                             servername=member.guild.name
@@ -180,15 +125,12 @@ class DiscordBot:
         @self.bot.event
         async def on_message(message):
             """收到訊息時觸發"""
-            # 忽略機器人自己的訊息
             if message.author == self.bot.user:
                 return
             
-            # 記錄收到的訊息（僅在調試模式下）
             if self.config.DEBUG:
                 self.logger.debug(f'收到訊息 - 使用者: {message.author}, 內容: {message.content}')
             
-            # 敏感詞過濾
             try:
                 from web_app import SENSITIVE_WORDS
                 content_lower = message.content.lower()
@@ -200,7 +142,6 @@ class DiscordBot:
             except Exception as e:
                 self.logger.debug(f'敏感詞過濾錯誤: {e}')
             
-            # 處理 @機器人 的訊息
             if self.bot.user and self.bot.user.mentioned_in(message) and not message.mention_everyone:
                 embed = discord.Embed(
                     title="👋 嗨！我是Discord機器人",
@@ -209,7 +150,6 @@ class DiscordBot:
                 )
                 await message.channel.send(embed=embed)
             
-            # 處理指令
             await self.bot.process_commands(message)
         
         @self.bot.event
@@ -248,7 +188,6 @@ class DiscordBot:
                 await ctx.send(embed=embed)
             
             else:
-                # 記錄未預期的錯誤
                 self.logger.error(f'指令錯誤: {error}', exc_info=True)
                 embed = discord.Embed(
                     title="❌ 發生錯誤",
@@ -259,35 +198,10 @@ class DiscordBot:
         
         @self.bot.event
         async def on_voice_state_update(member, before, after):
-            """機器人加入語音頻道時觸發警告訊息"""
+            """機器人加入語音頻道時觸發"""
             try:
-                # 檢查是否是機器人加入語音頻道
                 if member == self.bot.user and after.channel and not before.channel:
                     self.logger.info(f'機器人已加入語音頻道: {after.channel.name}')
-                    
-                    # 查找相應的文字頻道並發送警告訊息
-                    voice_channel = after.channel
-                    guild = voice_channel.guild
-                    
-                    # **優先發送到系統頻道**（隊長最容易看到）
-                    text_channel = guild.system_channel
-                    
-                    # 如果系統頻道不存在，查找對應的文字頻道
-                    if not text_channel:
-                        for ch in guild.text_channels:
-                            if voice_channel.name.lower() in ch.name.lower() or ch.name.lower() in voice_channel.name.lower():
-                                text_channel = ch
-                                break
-                    
-                    # 如果還是找不到，發送到第一個可發送的文字頻道
-                    if not text_channel:
-                        for ch in guild.text_channels:
-                            if ch.permissions_for(guild.me).send_messages:
-                                text_channel = ch
-                                break
-                    
-                    # 警告訊息已移除（不再發送）
-                    pass
             except Exception as e:
                 self.logger.warning(f'語音狀態更新事件出錯: {str(e)}')
     
