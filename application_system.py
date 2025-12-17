@@ -10,6 +10,89 @@ import logging
 from models import DatabaseManager, TeamApplication
 from datetime import datetime
 
+class CaptainApprovalView(discord.ui.View):
+    """隊長審核按鈕視圖"""
+    
+    def __init__(self, app_id, user_id, ff_name, db, bot):
+        super().__init__(timeout=None)  # 不超時
+        self.app_id = app_id
+        self.user_id = user_id
+        self.ff_name = ff_name
+        self.db = db
+        self.bot = bot
+    
+    @discord.ui.button(label='✅ 批准', style=discord.ButtonStyle.green)
+    async def approve_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """批准申請"""
+        try:
+            # 更新申請狀態
+            success = self.db.update_application_status(
+                self.app_id,
+                'approved',
+                str(interaction.user.id)
+            )
+            
+            if success:
+                # 通知申請者
+                try:
+                    applicant = await self.bot.fetch_user(self.user_id)
+                    embed = discord.Embed(
+                        title="🎉 恭喜！您的戰隊申請已通過！",
+                        description="歡迎加入 ɢʀᴠ 戰隊！\n\n您現在可以開始與戰隊成員互動了。",
+                        color=0x00ff00
+                    )
+                    await applicant.send(embed=embed)
+                except:
+                    pass
+                
+                # 禁用按鈕
+                for item in self.children:
+                    item.disabled = True
+                await interaction.response.edit_message(view=self)
+                await interaction.followup.send(f"✅ 已批准 {self.ff_name} 的申請！", ephemeral=True)
+            else:
+                await interaction.response.send_message("❌ 操作失敗", ephemeral=True)
+                
+        except Exception as e:
+            await interaction.response.send_message(f"❌ 錯誤: {str(e)}", ephemeral=True)
+    
+    @discord.ui.button(label='❌ 拒絕', style=discord.ButtonStyle.red)
+    async def reject_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """拒絕申請"""
+        try:
+            # 更新申請狀態
+            success = self.db.update_application_status(
+                self.app_id,
+                'rejected',
+                str(interaction.user.id),
+                "申請未通過審核"
+            )
+            
+            if success:
+                # 通知申請者
+                try:
+                    applicant = await self.bot.fetch_user(self.user_id)
+                    embed = discord.Embed(
+                        title="😔 您的戰隊申請未通過審核",
+                        description="很抱歉，您的申請未能通過審核。\n\n歡迎您改善後重新申請！",
+                        color=0xff0000
+                    )
+                    await applicant.send(embed=embed)
+                except:
+                    pass
+                
+                # 禁用按鈕
+                for item in self.children:
+                    item.disabled = True
+                await interaction.response.edit_message(view=self)
+                await interaction.followup.send(f"❌ 已拒絕 {self.ff_name} 的申請", ephemeral=True)
+            else:
+                await interaction.response.send_message("❌ 操作失敗", ephemeral=True)
+                
+        except Exception as e:
+            await interaction.response.send_message(f"❌ 錯誤: {str(e)}", ephemeral=True)
+
+
 class ApplicationView(discord.ui.View):
     """申請表單視圖"""
     
@@ -32,21 +115,12 @@ class ApplicationModal(discord.ui.Modal):
         self.bot = bot
         self.db = db
         
-    # 遊戲ID輸入框
+    # Free Fire 名稱輸入框
     game_id = discord.ui.TextInput(
-        label='遊戲ID',
-        placeholder='請輸入您的遊戲ID...',
+        label='Free Fire 名稱',
+        placeholder='請輸入您的 Free Fire 遊戲名稱...',
         required=True,
         max_length=100
-    )
-    
-    # 申請說明
-    application_text = discord.ui.TextInput(
-        label='申請說明',
-        placeholder='請簡單介紹您的遊戲經驗和為什麼想加入我們的戰隊...',
-        style=discord.TextStyle.paragraph,
-        required=False,
-        max_length=1000
     )
     
     async def on_submit(self, interaction: discord.Interaction):
@@ -58,25 +132,66 @@ class ApplicationModal(discord.ui.Modal):
             display_name=interaction.user.display_name,
             game_id=self.game_id.value,
             avatar_url=interaction.user.avatar.url if interaction.user.avatar else None,
-            photos=[],  # 稍後會更新照片
-            application_text=self.application_text.value
+            photos=[],
+            application_text=""
         )
         
-        # 提示用戶上傳照片
+        # 顯示等待審核訊息
         embed = discord.Embed(
-            title="✅ 申請表已提交！",
-            description=f"申請編號: #{app_id}\n\n📸 **請上傳您的個人檔案和申請照片**\n最多可以上傳5張照片\n\n請在接下來的5分鐘內上傳照片，上傳完成後申請將自動提交給管理員審核。",
-            color=0x00ff00
+            title="⏳ 正在等待隊長審核中，請稍等",
+            description=f"您的申請已提交！\n\n**Free Fire 名稱:** {self.game_id.value}\n**申請編號:** #{app_id}\n\n審核結果將通過私信通知您。",
+            color=0xffaa00
         )
-        embed.set_footer(text="照片上傳完成後，您的申請將進入審核流程")
+        embed.set_footer(text="感謝您的耐心等待！")
         
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        await interaction.response.send_message(embed=embed)
         
-        # 等待照片上傳
-        await self.wait_for_photos(interaction, app_id)
+        # 通知隊長有新申請
+        await self.notify_captain(app_id, interaction.user, self.game_id.value)
+    
+    async def notify_captain(self, app_id, user, ff_name):
+        """發送申請到隊長私訊"""
+        try:
+            from web_models import WebDatabaseManager
+            from datetime import timezone, timedelta
+            
+            web_db = WebDatabaseManager()
+            admins = web_db.get_admin_users()
+            
+            if not admins or not admins[0].discord_id:
+                logging.warning("未找到隊長或隊長未綁定 Discord ID")
+                return
+            
+            admin_discord_id = int(admins[0].discord_id)
+            captain = await self.bot.fetch_user(admin_discord_id)
+            
+            # 構建申請訊息
+            tz = timezone(timedelta(hours=8))
+            current_time = datetime.now(tz).strftime('%Y-%m-%d %H:%M:%S')
+            
+            embed = discord.Embed(
+                title="📋 新成員申請",
+                description=f"有新成員想加入戰隊！",
+                color=0xffaa00
+            )
+            embed.add_field(name="👤 Discord 名稱", value=user.display_name, inline=True)
+            embed.add_field(name="🎮 Free Fire 名稱", value=ff_name, inline=True)
+            embed.add_field(name="📅 申請時間", value=current_time, inline=False)
+            embed.add_field(name="🔢 申請編號", value=f"#{app_id}", inline=True)
+            embed.set_thumbnail(url=user.avatar.url if user.avatar else None)
+            embed.set_footer(text="請到網頁面板「申請管理」頁面審核")
+            
+            # 創建審核按鈕
+            view = CaptainApprovalView(app_id, user.id, ff_name, self.db, self.bot)
+            
+            await captain.send(embed=embed, view=view)
+            logging.info(f"✓ 已發送申請通知給隊長: {user.display_name} (FF: {ff_name})")
+            
+        except Exception as e:
+            logging.error(f"發送申請通知給隊長失敗: {e}")
     
     async def wait_for_photos(self, interaction, app_id):
-        """等待用戶上傳照片"""
+        """等待用戶上傳照片（保留但不使用）"""
         photos = []
         
         def check_message(msg):
@@ -390,7 +505,7 @@ class ApplicationDetailView(discord.ui.View):
                     color=0x00ff00
                 )
                 embed.set_thumbnail(url=self.application.avatar_url)
-                embed.add_field(name="🎮 遊戲ID", value=self.application.game_id, inline=True)
+                embed.add_field(name="🎮 Free Fire 名稱", value=self.application.game_id, inline=True)
                 embed.add_field(name="📅 加入時間", value=datetime.now().strftime('%Y-%m-%d'), inline=True)
                 
                 await welcome_channel.send(embed=embed)
@@ -454,12 +569,12 @@ def setup_application_system(bot):
         """新成員加入時顯示申請表單"""
         embed = discord.Embed(
             title="🎮 歡迎來到 ɢʀᴠ 戰隊！",
-            description="歡迎您對我們戰隊感興趣！\n\n為了維護戰隊品質和團隊氛圍，我們需要所有新成員填寫申請表。\n\n請點擊下方按鈕開始申請流程：",
+            description="歡迎您對我們戰隊感興趣！\n\n請點擊下方按鈕填寫您的 **Free Fire 名稱**，提交後請耐心等待隊長審核。",
             color=0x0099ff
         )
         embed.add_field(
             name="📋 申請流程",
-            value="1️⃣ 填寫遊戲ID\n2️⃣ 上傳個人檔案照片（最多5張）\n3️⃣ 等待管理員審核\n4️⃣ 接獲審核結果通知",
+            value="1️⃣ 點擊按鈕填寫 Free Fire 名稱\n2️⃣ 等待隊長審核\n3️⃣ 接獲審核結果通知",
             inline=False
         )
         embed.set_footer(text="感謝您的理解與配合！")

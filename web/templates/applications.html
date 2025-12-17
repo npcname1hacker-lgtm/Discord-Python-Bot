@@ -32,7 +32,7 @@
                     </div>
                     <div class="col-9">
                         <h6>{{ app.display_name }}</h6>
-                        <p class="text-muted mb-1">🎮 遊戲ID: {{ app.game_id }}</p>
+                        <p class="text-muted mb-1">🎮 Free Fire 名稱: {{ app.game_id }}</p>
                         <p class="text-muted mb-1">📅 申請時間: {{ app.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
                         {% if app.application_photos %}
                         <p class="text-muted mb-0">📸 照片: {{ app.application_photos|length }} 張</p>
