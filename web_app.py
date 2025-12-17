@@ -505,6 +505,16 @@ def bot_control():
     
     return render_template('bot_control.html')
 
+@app.route('/bot-status')
+@login_required
+def bot_status_page():
+    """機器人狀態頁面"""
+    if current_user.role == UserRole.LOW:
+        flash('你的權限不夠，請去私信隊長來申請', 'error')
+        return redirect(url_for('dashboard'))
+    
+    return render_template('bot_status.html')
+
 @app.route('/api/bot/status')
 @login_required
 def bot_status():
@@ -523,11 +533,14 @@ def bot_status():
             if guild.member_count:
                 member_count += guild.member_count
         
+        bot_user = discord_bot_instance.bot.user
         return jsonify({
             'online': not discord_bot_instance.bot.is_closed(),
-            'latency': round(discord_bot_instance.bot.latency * 1000) if discord_bot_instance.bot.latency else 0,
+            'latency': discord_bot_instance.bot.latency if discord_bot_instance.bot.latency else 0,
             'guild_count': len(discord_bot_instance.bot.guilds),
-            'member_count': member_count
+            'member_count': member_count,
+            'name': bot_user.name if bot_user else '--',
+            'id': str(bot_user.id) if bot_user else '--'
         })
     except Exception as e:
         return jsonify({
