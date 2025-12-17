@@ -132,6 +132,9 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">關閉</button>
+                <button type="button" class="btn btn-success" onclick="joinVoiceChannel()">
+                    <i class="fas fa-sign-in-alt"></i> 加入頻道
+                </button>
                 <button type="button" class="btn btn-danger" onclick="leaveVoiceChannel()">
                     <i class="fas fa-sign-out-alt"></i> 退出頻道
                 </button>
@@ -356,7 +359,7 @@ function confirmMuteVoiceMember() {
     fetch('/api/voice/mute', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({member_id: memberId, duration: parseInt(duration)})
+        body: JSON.stringify({user_id: memberId, channel_id: currentVoiceChannelId, duration: parseInt(duration)})
     })
     .then(res => res.json())
     .then(data => {
@@ -372,12 +375,35 @@ function confirmMuteVoiceMember() {
     .catch(err => alert('操作失敗'));
 }
 
+// 加入語音頻道
+function joinVoiceChannel() {
+    if (!currentVoiceChannelId) {
+        alert('請先選擇一個語音頻道');
+        return;
+    }
+    
+    fetch('/api/voice/join', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({channel_id: currentVoiceChannelId})
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            alert('機器人已加入語音頻道');
+        } else {
+            alert('加入失敗：' + (data.error || '未知錯誤'));
+        }
+    })
+    .catch(err => alert('操作失敗'));
+}
+
 // 解禁語音成員
 function unmuteVoiceMember(memberId) {
     fetch('/api/voice/unmute', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({member_id: memberId})
+        body: JSON.stringify({user_id: memberId, channel_id: currentVoiceChannelId})
     })
     .then(res => res.json())
     .then(data => {
@@ -398,7 +424,7 @@ function kickVoiceMember(memberId, memberName) {
     fetch('/api/voice/kick', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({member_id: memberId, channel_id: currentVoiceChannelId})
+        body: JSON.stringify({user_id: memberId, channel_id: currentVoiceChannelId})
     })
     .then(res => res.json())
     .then(data => {
