@@ -33,8 +33,9 @@ def setup_logging():
 def run_flask_app():
     """在單獨線程中運行Flask應用"""
     logger = logging.getLogger('web_app')
-    logger.info("正在啟動Flask網站控制面板...")
-    app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False)
+    port = int(os.environ.get('PORT', 5000))
+    logger.info(f"正在啟動Flask網站控制面板... (端口: {port})")
+    app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)
 
 async def run_discord_bot():
     """運行Discord機器人"""
@@ -69,7 +70,8 @@ async def main():
         
         # 等待一下讓Flask先啟動
         await asyncio.sleep(2)
-        logger.info("Flask網站控制面板已啟動 -> http://0.0.0.0:5000")
+        port = int(os.environ.get('PORT', 5000))
+        logger.info(f"Flask網站控制面板已啟動 -> http://0.0.0.0:{port}")
         
         # 嘗試啟動Discord機器人
         try:
