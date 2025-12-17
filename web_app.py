@@ -1486,6 +1486,143 @@ def get_voice_channels():
     
     return jsonify({'channels': channels})
 
+@app.route('/api/channels/<int:channel_id>/messages')
+@login_required
+def get_channel_messages(channel_id):
+    """獲取頻道訊息"""
+    if current_user.role == UserRole.LOW:
+        return jsonify({'error': '權限不足'}), 403
+    
+    if not discord_bot_instance or not hasattr(discord_bot_instance, 'bot') or discord_bot_instance.bot.is_closed():
+        return jsonify({'error': '機器人未連接'}), 503
+    
+    try:
+        async def fetch_messages():
+            channel = discord_bot_instance.bot.get_channel(channel_id)
+            if not channel:
+                return []
+            messages = []
+            async for msg in channel.history(limit=50):
+                messages.append({
+                    'id': str(msg.id),
+                    'author': msg.author.display_name,
+                    'content': msg.content,
+                    'time': msg.created_at.strftime('%Y-%m-%d %H:%M:%S')
+                })
+            return messages
+        
+        loop = discord_bot_instance.bot.loop
+        future = asyncio.run_coroutine_threadsafe(fetch_messages(), loop)
+        messages = future.result(timeout=10)
+        return jsonify({'messages': messages})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
+@app.route('/api/channels/delete-messages', methods=['POST'])
+@login_required
+def delete_channel_messages():
+    """刪除頻道訊息"""
+    if current_user.role == UserRole.LOW:
+        return jsonify({'error': '權限不足'}), 403
+    
+    if not discord_bot_instance or not hasattr(discord_bot_instance, 'bot') or discord_bot_instance.bot.is_closed():
+        return jsonify({'error': '機器人未連接'}), 503
+    
+    try:
+        data = request.json
+        channel_id = int(data.get('channel_id', 0))
+        count = int(data.get('count', 10))
+        
+        async def delete_msgs():
+            channel = discord_bot_instance.bot.get_channel(channel_id)
+            if not channel:
+                return False, '找不到頻道'
+            deleted = await channel.purge(limit=count)
+            return True, f'已刪除 {len(deleted)} 條訊息'
+        
+        loop = discord_bot_instance.bot.loop
+        future = asyncio.run_coroutine_threadsafe(delete_msgs(), loop)
+        success, msg = future.result(timeout=15)
+        
+        if success:
+            return jsonify({'success': True, 'message': msg})
+        else:
+            return jsonify({'error': msg}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
+@app.route('/api/members/timeout', methods=['POST'])
+@login_required
+def member_timeout():
+    """禁言或解禁成員"""
+    if current_user.role == UserRole.LOW:
+        return jsonify({'error': '權限不足'}), 403
+    
+    if not discord_bot_instance or not hasattr(discord_bot_instance, 'bot') or discord_bot_instance.bot.is_closed():
+        return jsonify({'error': '機器人未連接'}), 503
+    
+    try:
+        data = request.json
+        member_id = int(data.get('member_id', 0))
+        duration = int(data.get('duration', 0))
+        action = data.get('action', 'timeout')
+        
+        async def do_timeout():
+            for guild in discord_bot_instance.bot.guilds:
+                member = guild.get_member(member_id)
+                if member:
+                    if action == 'untimeout' or duration == 0:
+                        await member.timeout(None)
+                        return True, '已解除禁言'
+                    else:
+                        await member.timeout(timedelta(seconds=duration), reason='管理員禁言')
+                        return True, f'已禁言 {duration // 60} 分鐘'
+            return False, '找不到成員'
+        
+        loop = discord_bot_instance.bot.loop
+        future = asyncio.run_coroutine_threadsafe(do_timeout(), loop)
+        success, msg = future.result(timeout=10)
+        
+        if success:
+            return jsonify({'success': True, 'message': msg})
+        else:
+            return jsonify({'error': msg}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
+@app.route('/api/members/kick', methods=['POST'])
+@login_required
+def kick_member():
+    """踢出成員"""
+    if current_user.role == UserRole.LOW:
+        return jsonify({'error': '權限不足'}), 403
+    
+    if not discord_bot_instance or not hasattr(discord_bot_instance, 'bot') or discord_bot_instance.bot.is_closed():
+        return jsonify({'error': '機器人未連接'}), 503
+    
+    try:
+        data = request.json
+        member_id = int(data.get('member_id', 0))
+        
+        async def do_kick():
+            for guild in discord_bot_instance.bot.guilds:
+                member = guild.get_member(member_id)
+                if member:
+                    await member.kick(reason='管理員踢出')
+                    return True, '已踢出成員'
+            return False, '找不到成員'
+        
+        loop = discord_bot_instance.bot.loop
+        future = asyncio.run_coroutine_threadsafe(do_kick(), loop)
+        success, msg = future.result(timeout=10)
+        
+        if success:
+            return jsonify({'success': True, 'message': msg})
+        else:
+            return jsonify({'error': msg}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
 @app.route('/api/channels/<int:channel_id>/members')
 @login_required
 def get_channel_members(channel_id):

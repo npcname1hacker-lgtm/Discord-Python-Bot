@@ -22,7 +22,7 @@
     </li>
     <li class="nav-item">
         <button class="nav-link" data-bs-toggle="tab" data-bs-target="#announcements" type="button">
-            <i class="fas fa-megaphone"></i> 公告設置
+            <i class="fas fa-bullhorn"></i> 公告設置
         </button>
     </li>
 </ul>
@@ -40,7 +40,7 @@
                         <tr>
                             <th>頻道名稱</th>
                             <th>ID</th>
-                            <th>主題</th>
+                            <th>伺服器</th>
                             <th>操作</th>
                         </tr>
                     </thead>
@@ -75,24 +75,6 @@
 
     <!-- 公告設置 -->
     <div class="tab-pane fade" id="announcements">
-        <div class="card mb-3">
-            <div class="card-header bg-warning text-dark">
-                <h5>論壇頻道（公告用）</h5>
-            </div>
-            <div class="card-body">
-                <table class="table" id="forumChannelsTable">
-                    <thead>
-                        <tr>
-                            <th>頻道名稱</th>
-                            <th>ID</th>
-                            <th>類型</th>
-                            <th>操作</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-        </div>
         <div class="card">
             <div class="card-header bg-warning text-dark">
                 <h5>發送公告</h5>
@@ -114,37 +96,181 @@
                     <textarea class="form-control" id="announcementContent" rows="5" placeholder="輸入公告內容..."></textarea>
                 </div>
                 <button class="btn btn-warning" onclick="sendAnnouncement()">
-                    <i class="fas fa-send"></i> 發送公告
+                    <i class="fas fa-paper-plane"></i> 發送公告
                 </button>
             </div>
         </div>
     </div>
 </div>
 
+<!-- 語音頻道成員管理彈窗 -->
+<div class="modal fade" id="voiceMembersModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title"><i class="fas fa-users"></i> 語音頻道成員管理 - <span id="voiceChannelName"></span></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="voiceMembersTable">
+                        <thead>
+                            <tr>
+                                <th>成員</th>
+                                <th>暱稱</th>
+                                <th>狀態</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <div id="noVoiceMembers" class="text-center text-muted py-3" style="display:none;">
+                    <i class="fas fa-user-slash fa-2x mb-2"></i>
+                    <p>此頻道目前沒有成員</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">關閉</button>
+                <button type="button" class="btn btn-danger" onclick="leaveVoiceChannel()">
+                    <i class="fas fa-sign-out-alt"></i> 退出頻道
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 文字頻道聊天室彈窗 -->
+<div class="modal fade" id="textChatModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="fas fa-comments"></i> <span id="textChannelName"></span></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="row g-0" style="height: 500px;">
+                    <!-- 聊天區域 -->
+                    <div class="col-md-8 border-end">
+                        <div id="chatMessages" class="p-3" style="height: 400px; overflow-y: auto; background: #f8f9fa;">
+                            <div class="text-center text-muted py-5">
+                                <i class="fas fa-spinner fa-spin fa-2x"></i>
+                                <p class="mt-2">正在載入訊息...</p>
+                            </div>
+                        </div>
+                        <div class="p-3 border-top bg-white">
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="chatInput" placeholder="輸入訊息...">
+                                <button class="btn btn-success" onclick="sendChatMessage()">
+                                    <i class="fas fa-paper-plane"></i> 發送
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- 成員管理區域 -->
+                    <div class="col-md-4">
+                        <div class="p-3">
+                            <h6><i class="fas fa-user-cog"></i> 成員管理</h6>
+                            <div class="mb-3">
+                                <label class="form-label">選擇成員</label>
+                                <select class="form-control" id="textMemberSelect">
+                                    <option value="">-- 選擇成員 --</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">禁言時間</label>
+                                <select class="form-control" id="muteTime">
+                                    <option value="60">1 分鐘</option>
+                                    <option value="300">5 分鐘</option>
+                                    <option value="600">10 分鐘</option>
+                                    <option value="1800">30 分鐘</option>
+                                    <option value="3600">1 小時</option>
+                                    <option value="86400">1 天</option>
+                                </select>
+                            </div>
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-warning" onclick="muteTextMember()">
+                                    <i class="fas fa-volume-mute"></i> 禁言
+                                </button>
+                                <button class="btn btn-success" onclick="unmuteTextMember()">
+                                    <i class="fas fa-volume-up"></i> 解除禁言
+                                </button>
+                                <button class="btn btn-danger" onclick="kickTextMember()">
+                                    <i class="fas fa-user-slash"></i> 踢出伺服器
+                                </button>
+                            </div>
+                            <hr>
+                            <h6><i class="fas fa-trash"></i> 訊息管理</h6>
+                            <div class="mb-3">
+                                <label class="form-label">刪除訊息數量</label>
+                                <input type="number" class="form-control" id="deleteCount" value="10" min="1" max="100">
+                            </div>
+                            <button class="btn btn-outline-danger w-100" onclick="deleteMessages()">
+                                <i class="fas fa-trash-alt"></i> 刪除訊息
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 禁言時間選擇彈窗 -->
+<div class="modal fade" id="muteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title"><i class="fas fa-volume-mute"></i> 禁言成員</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>確定要禁言 <strong id="muteMemberName"></strong> 嗎？</p>
+                <div class="mb-3">
+                    <label class="form-label">禁言時間</label>
+                    <select class="form-control" id="voiceMuteTime">
+                        <option value="60">1 分鐘</option>
+                        <option value="300">5 分鐘</option>
+                        <option value="600">10 分鐘</option>
+                        <option value="1800">30 分鐘</option>
+                        <option value="3600">1 小時</option>
+                        <option value="86400">1 天</option>
+                    </select>
+                </div>
+                <input type="hidden" id="muteMemberId">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-warning" onclick="confirmMuteVoiceMember()">確認禁言</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
+let currentVoiceChannelId = null;
+let currentTextChannelId = null;
+let chatRefreshInterval = null;
+
 // 載入文字頻道
 fetch('/api/channels/text-channels')
     .then(res => res.json())
     .then(data => {
         const textTbody = document.querySelector('#textChannelsTable tbody');
-        const forumTbody = document.querySelector('#forumChannelsTable tbody');
         const select = document.getElementById('announcementChannel');
         
         if (data.channels) {
             data.channels.forEach(ch => {
                 const row = textTbody.insertRow();
-                row.innerHTML = `<td>${ch.name}</td><td>${ch.id}</td><td>--</td><td><button class="btn btn-sm btn-info">查看</button></td>`;
+                row.innerHTML = `<td>${ch.name}</td><td>${ch.id}</td><td>${ch.guild_name}</td>
+                    <td><button class="btn btn-sm btn-info" onclick="openTextChat('${ch.id}', '${ch.name}')">
+                        <i class="fas fa-eye"></i> 查看
+                    </button></td>`;
                 
                 const option = document.createElement('option');
                 option.value = ch.id;
                 option.textContent = ch.name;
                 select.appendChild(option);
-            });
-            
-            // 論壇頻道（使用文字頻道列表）
-            data.channels.forEach(ch => {
-                const row = forumTbody.insertRow();
-                row.innerHTML = `<td>${ch.name}</td><td>${ch.id}</td><td>文字頻道</td><td><button class="btn btn-sm btn-success" onclick="setAnnouncementChannel('${ch.id}', '${ch.name}')">使用此頻道</button></td>`;
             });
         }
     })
@@ -159,38 +285,342 @@ fetch('/api/channels/voice-channels')
         if (data.channels) {
             data.channels.forEach(ch => {
                 const row = voiceTbody.insertRow();
-                row.innerHTML = `<td>${ch.name}</td><td>${ch.id}</td><td>${ch.user_limit || '無限制'}</td><td>${ch.member_count || 0}</td><td><button class="btn btn-sm btn-primary" onclick="joinVoiceChannel('${ch.id}')">加入</button></td>`;
+                const limitText = ch.user_limit === 0 ? '無限制' : ch.user_limit;
+                row.innerHTML = `<td>${ch.name}</td><td>${ch.id}</td><td>${limitText}</td><td>${ch.member_count}</td>
+                    <td><button class="btn btn-sm btn-primary" onclick="openVoiceControl('${ch.id}', '${ch.name}')">
+                        <i class="fas fa-cog"></i> 管理
+                    </button></td>`;
             });
         }
     })
     .catch(err => console.error('載入語音頻道失敗', err));
 
-function setAnnouncementChannel(channelId, channelName) {
-    const select = document.getElementById('announcementChannel');
-    select.value = channelId;
-    alert('已選擇頻道：' + channelName);
+// 開啟語音頻道控制
+function openVoiceControl(channelId, channelName) {
+    currentVoiceChannelId = channelId;
+    document.getElementById('voiceChannelName').textContent = channelName;
+    loadVoiceMembers(channelId);
+    new bootstrap.Modal(document.getElementById('voiceMembersModal')).show();
 }
 
-function joinVoiceChannel(channelId) {
-    fetch('/api/voice/join', {
+// 載入語音頻道成員
+function loadVoiceMembers(channelId) {
+    fetch(`/api/channels/${channelId}/members`)
+        .then(res => res.json())
+        .then(data => {
+            const tbody = document.querySelector('#voiceMembersTable tbody');
+            const noMembers = document.getElementById('noVoiceMembers');
+            tbody.innerHTML = '';
+            
+            if (data.members && data.members.length > 0) {
+                noMembers.style.display = 'none';
+                data.members.forEach(m => {
+                    const row = tbody.insertRow();
+                    row.innerHTML = `
+                        <td><i class="fas fa-user"></i> ${m.name}</td>
+                        <td>${m.nick || '--'}</td>
+                        <td><span class="badge bg-success">在線</span></td>
+                        <td>
+                            <button class="btn btn-sm btn-warning" onclick="showMuteModal('${m.id}', '${m.name}')">
+                                <i class="fas fa-volume-mute"></i> 禁言
+                            </button>
+                            <button class="btn btn-sm btn-success" onclick="unmuteVoiceMember('${m.id}')">
+                                <i class="fas fa-volume-up"></i> 解禁
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="kickVoiceMember('${m.id}', '${m.name}')">
+                                <i class="fas fa-user-slash"></i> 踢出
+                            </button>
+                        </td>`;
+                });
+            } else {
+                noMembers.style.display = 'block';
+            }
+        })
+        .catch(err => {
+            console.error('載入成員失敗', err);
+        });
+}
+
+// 顯示禁言彈窗
+function showMuteModal(memberId, memberName) {
+    document.getElementById('muteMemberId').value = memberId;
+    document.getElementById('muteMemberName').textContent = memberName;
+    new bootstrap.Modal(document.getElementById('muteModal')).show();
+}
+
+// 確認禁言語音成員
+function confirmMuteVoiceMember() {
+    const memberId = document.getElementById('muteMemberId').value;
+    const duration = document.getElementById('voiceMuteTime').value;
+    
+    fetch('/api/voice/mute', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({channel_id: channelId})
+        body: JSON.stringify({member_id: memberId, duration: parseInt(duration)})
     })
     .then(res => res.json())
     .then(data => {
         if (data.success) {
-            alert('已加入語音頻道！');
+            const minutes = Math.floor(duration / 60);
+            alert(`已禁言！警告：你已被禁言，請等待 ${minutes} 分鐘後才能正常說話`);
+            bootstrap.Modal.getInstance(document.getElementById('muteModal')).hide();
+            loadVoiceMembers(currentVoiceChannelId);
         } else {
-            alert('加入失敗：' + (data.error || '未知錯誤'));
+            alert('禁言失敗：' + (data.error || '未知錯誤'));
         }
     })
-    .catch(err => {
-        console.error(err);
-        alert('加入出錯');
-    });
+    .catch(err => alert('操作失敗'));
 }
 
+// 解禁語音成員
+function unmuteVoiceMember(memberId) {
+    fetch('/api/voice/unmute', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({member_id: memberId})
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            alert('已解除禁言！');
+            loadVoiceMembers(currentVoiceChannelId);
+        } else {
+            alert('解禁失敗：' + (data.error || '未知錯誤'));
+        }
+    })
+    .catch(err => alert('操作失敗'));
+}
+
+// 踢出語音成員
+function kickVoiceMember(memberId, memberName) {
+    if (!confirm(`確定要將 ${memberName} 踢出語音頻道嗎？`)) return;
+    
+    fetch('/api/voice/kick', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({member_id: memberId, channel_id: currentVoiceChannelId})
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            alert('已踢出！');
+            loadVoiceMembers(currentVoiceChannelId);
+        } else {
+            alert('踢出失敗：' + (data.error || '未知錯誤'));
+        }
+    })
+    .catch(err => alert('操作失敗'));
+}
+
+// 退出語音頻道
+function leaveVoiceChannel() {
+    fetch('/api/voice/leave', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({})
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            alert('已退出語音頻道');
+            bootstrap.Modal.getInstance(document.getElementById('voiceMembersModal')).hide();
+        } else {
+            alert('退出失敗：' + (data.error || '未知錯誤'));
+        }
+    })
+    .catch(err => alert('操作失敗'));
+}
+
+// 開啟文字頻道聊天室
+function openTextChat(channelId, channelName) {
+    currentTextChannelId = channelId;
+    document.getElementById('textChannelName').textContent = channelName;
+    loadChatMessages();
+    loadChannelMembers();
+    new bootstrap.Modal(document.getElementById('textChatModal')).show();
+    
+    // 設置自動刷新
+    if (chatRefreshInterval) clearInterval(chatRefreshInterval);
+    chatRefreshInterval = setInterval(loadChatMessages, 5000);
+}
+
+// 載入聊天訊息
+function loadChatMessages() {
+    fetch(`/api/channels/${currentTextChannelId}/messages`)
+        .then(res => res.json())
+        .then(data => {
+            const container = document.getElementById('chatMessages');
+            
+            if (data.messages && data.messages.length > 0) {
+                container.innerHTML = data.messages.map(msg => `
+                    <div class="mb-2 p-2 bg-white rounded shadow-sm">
+                        <div class="d-flex justify-content-between">
+                            <strong class="text-primary">${msg.author}</strong>
+                            <small class="text-muted">${msg.time}</small>
+                        </div>
+                        <p class="mb-0">${msg.content}</p>
+                        <small class="text-muted">ID: ${msg.id}</small>
+                    </div>
+                `).join('');
+                container.scrollTop = container.scrollHeight;
+            } else {
+                container.innerHTML = '<div class="text-center text-muted py-5"><i class="fas fa-inbox fa-2x"></i><p class="mt-2">暫無訊息</p></div>';
+            }
+        })
+        .catch(err => {
+            console.error('載入訊息失敗', err);
+            document.getElementById('chatMessages').innerHTML = '<div class="text-center text-danger py-5"><i class="fas fa-exclamation-triangle fa-2x"></i><p class="mt-2">載入失敗</p></div>';
+        });
+}
+
+// 載入頻道成員
+function loadChannelMembers() {
+    fetch(`/api/channels/${currentTextChannelId}/members`)
+        .then(res => res.json())
+        .then(data => {
+            const select = document.getElementById('textMemberSelect');
+            select.innerHTML = '<option value="">-- 選擇成員 --</option>';
+            
+            if (data.members) {
+                data.members.forEach(m => {
+                    const option = document.createElement('option');
+                    option.value = m.id;
+                    option.textContent = m.nick || m.name;
+                    select.appendChild(option);
+                });
+            }
+        })
+        .catch(err => console.error('載入成員失敗', err));
+}
+
+// 發送聊天訊息
+function sendChatMessage() {
+    const input = document.getElementById('chatInput');
+    const message = input.value.trim();
+    
+    if (!message) return;
+    
+    fetch('/api/bot/say', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({message: message, channel_id: currentTextChannelId})
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            input.value = '';
+            setTimeout(loadChatMessages, 500);
+        } else {
+            alert('發送失敗：' + (data.error || '未知錯誤'));
+        }
+    })
+    .catch(err => alert('發送失敗'));
+}
+
+// 禁言文字成員
+function muteTextMember() {
+    const memberId = document.getElementById('textMemberSelect').value;
+    const duration = document.getElementById('muteTime').value;
+    
+    if (!memberId) {
+        alert('請選擇成員');
+        return;
+    }
+    
+    fetch('/api/members/timeout', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({member_id: memberId, duration: parseInt(duration), action: 'timeout'})
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            const minutes = Math.floor(duration / 60);
+            alert(`已禁言！\n\n⚠️ 警告：你已被禁言，請等待 ${minutes} 分鐘後才能正常說話`);
+        } else {
+            alert('禁言失敗：' + (data.error || '未知錯誤'));
+        }
+    })
+    .catch(err => alert('操作失敗'));
+}
+
+// 解禁文字成員
+function unmuteTextMember() {
+    const memberId = document.getElementById('textMemberSelect').value;
+    
+    if (!memberId) {
+        alert('請選擇成員');
+        return;
+    }
+    
+    fetch('/api/members/timeout', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({member_id: memberId, duration: 0, action: 'untimeout'})
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            alert('已解除禁言！');
+        } else {
+            alert('解禁失敗：' + (data.error || '未知錯誤'));
+        }
+    })
+    .catch(err => alert('操作失敗'));
+}
+
+// 踢出文字成員
+function kickTextMember() {
+    const memberId = document.getElementById('textMemberSelect').value;
+    
+    if (!memberId) {
+        alert('請選擇成員');
+        return;
+    }
+    
+    if (!confirm('確定要踢出此成員嗎？')) return;
+    
+    fetch('/api/members/kick', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({member_id: memberId})
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            alert('已踢出！');
+            loadChannelMembers();
+        } else {
+            alert('踢出失敗：' + (data.error || '未知錯誤'));
+        }
+    })
+    .catch(err => alert('操作失敗'));
+}
+
+// 刪除訊息
+function deleteMessages() {
+    const count = document.getElementById('deleteCount').value;
+    
+    if (!confirm(`確定要刪除最近 ${count} 條訊息嗎？`)) return;
+    
+    fetch('/api/channels/delete-messages', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({channel_id: currentTextChannelId, count: parseInt(count)})
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            alert('訊息已刪除！');
+            loadChatMessages();
+        } else {
+            alert('刪除失敗：' + (data.error || '未知錯誤'));
+        }
+    })
+    .catch(err => alert('操作失敗'));
+}
+
+// 發送公告
 function sendAnnouncement() {
     const channelId = document.getElementById('announcementChannel').value;
     const title = document.getElementById('announcementTitle').value;
@@ -204,11 +634,7 @@ function sendAnnouncement() {
     fetch('/api/channels/send-announcement', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-            channel_id: channelId,
-            title: title,
-            content: content
-        })
+        body: JSON.stringify({channel_id: channelId, title: title, content: content})
     })
     .then(res => res.json())
     .then(data => {
@@ -220,10 +646,27 @@ function sendAnnouncement() {
             alert('發送失敗：' + (data.error || '未知錯誤'));
         }
     })
-    .catch(err => {
-        console.error(err);
-        alert('發送出錯');
-    });
+    .catch(err => alert('發送出錯'));
 }
+
+// Enter鍵發送訊息
+document.addEventListener('DOMContentLoaded', function() {
+    const chatInput = document.getElementById('chatInput');
+    if (chatInput) {
+        chatInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendChatMessage();
+            }
+        });
+    }
+});
+
+// 關閉聊天室時清除定時器
+document.getElementById('textChatModal').addEventListener('hidden.bs.modal', function() {
+    if (chatRefreshInterval) {
+        clearInterval(chatRefreshInterval);
+        chatRefreshInterval = null;
+    }
+});
 </script>
 {% endblock %}
