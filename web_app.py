@@ -1479,7 +1479,9 @@ def get_voice_channels():
             channels.append({
                 'id': str(channel.id),
                 'name': channel.name,
-                'guild_name': guild.name
+                'guild_name': guild.name,
+                'user_limit': channel.user_limit if channel.user_limit else 0,
+                'member_count': len(channel.members)
             })
     
     return jsonify({'channels': channels})

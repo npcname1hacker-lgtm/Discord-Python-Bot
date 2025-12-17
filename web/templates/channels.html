@@ -122,12 +122,11 @@
 </div>
 
 <script>
-// 載入所有頻道
-fetch('/api/bot/channels')
+// 載入文字頻道
+fetch('/api/channels/text-channels')
     .then(res => res.json())
     .then(data => {
         const textTbody = document.querySelector('#textChannelsTable tbody');
-        const voiceTbody = document.querySelector('#voiceChannelsTable tbody');
         const forumTbody = document.querySelector('#forumChannelsTable tbody');
         const select = document.getElementById('announcementChannel');
         
@@ -141,17 +140,56 @@ fetch('/api/bot/channels')
                 option.textContent = ch.name;
                 select.appendChild(option);
             });
-        }
-        
-        // 論壇頻道（暫時使用相同的頻道列表，實際應該只顯示論壇頻道）
-        if (data.channels) {
+            
+            // 論壇頻道（使用文字頻道列表）
             data.channels.forEach(ch => {
                 const row = forumTbody.insertRow();
-                row.innerHTML = `<td>${ch.name}</td><td>${ch.id}</td><td>論壇</td><td><button class="btn btn-sm btn-success">使用此頻道</button></td>`;
+                row.innerHTML = `<td>${ch.name}</td><td>${ch.id}</td><td>文字頻道</td><td><button class="btn btn-sm btn-success" onclick="setAnnouncementChannel('${ch.id}', '${ch.name}')">使用此頻道</button></td>`;
             });
         }
     })
-    .catch(err => console.error('載入頻道失敗', err));
+    .catch(err => console.error('載入文字頻道失敗', err));
+
+// 載入語音頻道
+fetch('/api/channels/voice-channels')
+    .then(res => res.json())
+    .then(data => {
+        const voiceTbody = document.querySelector('#voiceChannelsTable tbody');
+        
+        if (data.channels) {
+            data.channels.forEach(ch => {
+                const row = voiceTbody.insertRow();
+                row.innerHTML = `<td>${ch.name}</td><td>${ch.id}</td><td>${ch.user_limit || '無限制'}</td><td>${ch.member_count || 0}</td><td><button class="btn btn-sm btn-primary" onclick="joinVoiceChannel('${ch.id}')">加入</button></td>`;
+            });
+        }
+    })
+    .catch(err => console.error('載入語音頻道失敗', err));
+
+function setAnnouncementChannel(channelId, channelName) {
+    const select = document.getElementById('announcementChannel');
+    select.value = channelId;
+    alert('已選擇頻道：' + channelName);
+}
+
+function joinVoiceChannel(channelId) {
+    fetch('/api/voice/join', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({channel_id: channelId})
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            alert('已加入語音頻道！');
+        } else {
+            alert('加入失敗：' + (data.error || '未知錯誤'));
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        alert('加入出錯');
+    });
+}
 
 function sendAnnouncement() {
     const channelId = document.getElementById('announcementChannel').value;
