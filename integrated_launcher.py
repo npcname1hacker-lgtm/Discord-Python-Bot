@@ -34,7 +34,25 @@ def run_flask_app():
     """在單獨線程中運行Flask應用"""
     logger = logging.getLogger('web_app')
     port = int(os.environ.get('PORT', 5000))
+    
+    # 取得公開 URL
+    public_url = os.environ.get('PUBLIC_URL')
+    if not public_url:
+        public_url = os.environ.get('VERCEL_URL') or os.environ.get('HEROKU_APP_NAME')
+        if public_url and not public_url.startswith('http'):
+            if 'heroku' in public_url.lower():
+                public_url = f"https://{public_url}.herokuapp.com"
+            else:
+                public_url = f"https://{public_url}"
+    
     logger.info(f"正在啟動Flask網站控制面板... (端口: {port})")
+    if public_url:
+        logger.info(f"")
+        logger.info(f"╔════════════════════════════════════════╗")
+        logger.info(f"║  🌐 網站已啟動 - 請訪問以下網址:      ║")
+        logger.info(f"║  {public_url}")
+        logger.info(f"╚════════════════════════════════════════╝")
+        logger.info(f"")
     app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)
 
 async def run_discord_bot():
@@ -71,7 +89,7 @@ async def main():
         # 等待一下讓Flask先啟動
         await asyncio.sleep(2)
         port = int(os.environ.get('PORT', 5000))
-        logger.info(f"Flask網站控制面板已啟動 -> http://0.0.0.0:{port}")
+        logger.info(f"Flask網站控制面板已啟動 (本地: http://0.0.0.0:{port})")
         
         # 嘗試啟動Discord機器人
         try:
