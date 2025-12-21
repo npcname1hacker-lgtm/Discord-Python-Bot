@@ -213,8 +213,9 @@ class EmailService:
         try:
             credentials = self.get_credentials()
             
-            # 這裡應該是您的網站域名
-            reset_url = f"http://0.0.0.0:5000/reset-password?token={reset_token}"
+            # 從環境變數獲取網站 URL
+            website_url = os.environ.get('WEBSITE_URL', 'http://0.0.0.0:5000')
+            reset_url = f"{website_url}/reset-password?token={reset_token}"
             
             html_content = f"""
             <!DOCTYPE html>
