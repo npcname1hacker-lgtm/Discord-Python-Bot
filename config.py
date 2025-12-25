@@ -11,12 +11,14 @@ class Config:
     
     def __init__(self):
         """初始化配置"""
-        # 只從 .env 檔案載入環境變數，不讀取系統環境變數
-        load_dotenv(override=True)
+        import os
+        from dotenv import load_dotenv
+        # 強制在最開始載入 .env
+        env_path = os.path.join(os.getcwd(), '.env')
+        load_dotenv(env_path, override=True)
         
-        # 使用 os.environ.get 確保能讀取到 load_dotenv 載入的變數
+        # 讀取所有變數
         token = os.environ.get('DISCORD_TOKEN', '')
-        # 過濾掉可能存在的引號和空格
         self.DISCORD_TOKEN = token.replace('"', '').replace("'", "").strip()
         self.COMMAND_PREFIX = os.environ.get('COMMAND_PREFIX', '!')
         self.BOT_STATUS = os.environ.get('BOT_STATUS', '使用 !help 獲取幫助')

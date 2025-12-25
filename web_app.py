@@ -21,8 +21,12 @@ from models import get_bot_database
 from email_service import get_email_service
 
 app = Flask(__name__, template_folder='web/templates', static_folder='web/static')
+import os
 from dotenv import load_dotenv
-load_dotenv(override=True)
+# 強制在最開始載入 .env
+env_path = os.path.join(os.getcwd(), '.env')
+load_dotenv(env_path, override=True)
+
 # 直接從 os.environ 讀取，確保 load_dotenv 的結果生效
 flask_secret_key = os.environ.get('FLASK_SECRET_KEY')
 if not flask_secret_key:
