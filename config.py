@@ -11,13 +11,13 @@ class Config:
     
     def __init__(self):
         """初始化配置"""
-        # 載入環境變數檔案
+        # 只從 .env 檔案載入環境變數，不讀取系統環境變數
         load_dotenv(override=True)
         
-        # Discord機器人設置
-        self.DISCORD_TOKEN = os.getenv('DISCORD_TOKEN', '').strip()
-        self.COMMAND_PREFIX = os.getenv('COMMAND_PREFIX', '!')
-        self.BOT_STATUS = os.getenv('BOT_STATUS', '使用 !help 獲取幫助')
+        # 使用 os.environ.get 確保能讀取到 load_dotenv 載入的變數
+        self.DISCORD_TOKEN = os.environ.get('DISCORD_TOKEN', '').strip()
+        self.COMMAND_PREFIX = os.environ.get('COMMAND_PREFIX', '!')
+        self.BOT_STATUS = os.environ.get('BOT_STATUS', '使用 !help 獲取幫助')
         
         # 公告頻道設置
         self.ANNOUNCEMENT_CHANNEL_ID = 1410846655980503040  # ɢʀᴠ戰隊群公告頻道（永久預設）
