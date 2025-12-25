@@ -21,6 +21,8 @@ from models import get_bot_database
 from email_service import get_email_service
 
 app = Flask(__name__, template_folder='web/templates', static_folder='web/static')
+from dotenv import load_dotenv
+load_dotenv(override=True)
 flask_secret_key = os.environ.get('FLASK_SECRET_KEY')
 if not flask_secret_key:
     raise ValueError('未設置 FLASK_SECRET_KEY。請在環境變數中設置 FLASK_SECRET_KEY 或在 .env 檔案中添加。')
