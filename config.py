@@ -12,10 +12,10 @@ class Config:
     def __init__(self):
         """初始化配置"""
         # 載入環境變數檔案
-        load_dotenv()
+        load_dotenv(override=True)
         
         # Discord機器人設置
-        self.DISCORD_TOKEN = os.getenv('DISCORD_TOKEN', '')
+        self.DISCORD_TOKEN = os.getenv('DISCORD_TOKEN', '').strip()
         self.COMMAND_PREFIX = os.getenv('COMMAND_PREFIX', '!')
         self.BOT_STATUS = os.getenv('BOT_STATUS', '使用 !help 獲取幫助')
         
