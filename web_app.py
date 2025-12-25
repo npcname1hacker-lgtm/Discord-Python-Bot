@@ -1846,4 +1846,6 @@ def undeafen_voice_user():
         return jsonify({'error': str(e)}), 400
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    # 在 Termux 上運行時，監聽 0.0.0.0 以便區域網訪問
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
