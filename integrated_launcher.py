@@ -13,7 +13,8 @@ import os
 # Force SQLite if PostgreSQL is not available (development fallback)
 db_url = os.getenv('DATABASE_URL', '')
 if not db_url or 'ep-ancient-waterfall' in db_url:
-    os.environ['DATABASE_URL'] = 'sqlite:////tmp/grv_team.db'
+    # 在 Termux 下使用本地目錄
+    os.environ['DATABASE_URL'] = 'sqlite:///grv_team.db'
     os.environ['FORCE_SQLITE'] = '1'
 
 from bot import DiscordBot

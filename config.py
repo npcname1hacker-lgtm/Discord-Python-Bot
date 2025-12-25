@@ -15,7 +15,9 @@ class Config:
         load_dotenv(override=True)
         
         # 使用 os.environ.get 確保能讀取到 load_dotenv 載入的變數
-        self.DISCORD_TOKEN = os.environ.get('DISCORD_TOKEN', '').strip()
+        token = os.environ.get('DISCORD_TOKEN', '')
+        # 過濾掉可能存在的引號和空格
+        self.DISCORD_TOKEN = token.replace('"', '').replace("'", "").strip()
         self.COMMAND_PREFIX = os.environ.get('COMMAND_PREFIX', '!')
         self.BOT_STATUS = os.environ.get('BOT_STATUS', '使用 !help 獲取幫助')
         
