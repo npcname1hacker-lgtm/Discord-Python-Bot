@@ -20,7 +20,7 @@ fi
 
 # 安裝 Python 依賴
 pip install --upgrade pip
-pip install flask flask-login flask-sqlalchemy discord-py requests python-dotenv bcrypt gunicorn py-bcrypt
+pip install flask flask-login flask-sqlalchemy discord.py requests python-dotenv bcrypt gunicorn py-bcrypt
 
 echo "✅ 環境準備完成！"
 echo "💡 啟動指令：python integrated_launcher.py"
